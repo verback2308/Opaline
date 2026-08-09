@@ -8,7 +8,8 @@ enum AppURLs {
         static let innertube = "https://www.youtube.com/youtubei/v1"
         static let tv        = "https://www.youtube.com/tv"
 
-        /// hqdefault thumbnail URL for a given video ID.
+        /// Stable fallback thumbnail URL for a given video ID. The thumbnail
+        /// loader adds higher-resolution candidates when this is used.
         static func thumbnailURL(videoId: String) -> String {
             "https://i.ytimg.com/vi/\(videoId)/hqdefault.jpg"
         }

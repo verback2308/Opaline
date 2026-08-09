@@ -8,6 +8,9 @@ extension VideosViewController: UICollectionViewDataSourcePrefetching {
         guard !isLoadingInitial else {
             return
         }
+        let pixelSize = ThumbnailSizing.pixelSize(
+            for: collectionView
+        )
         for indexPath in indexPaths {
             guard indexPath.section < sections.count,
                   indexPath.item < sections[indexPath.section].videos.count
@@ -16,7 +19,11 @@ extension VideosViewController: UICollectionViewDataSourcePrefetching {
             }
             let video = video(at: indexPath)
             if let url = URL(string: video.thumbnailURL) {
-                ThumbnailImageView.prefetch(url: url)
+                ThumbnailImageView.prefetch(
+                    url: url,
+                    videoId: video.isShort ? nil : video.id,
+                    maxPixelSize: pixelSize
+                )
             }
         }
     }
@@ -25,6 +32,9 @@ extension VideosViewController: UICollectionViewDataSourcePrefetching {
         _ collectionView: UICollectionView,
         cancelPrefetchingForItemsAt indexPaths: [IndexPath]
     ) {
+        let pixelSize = ThumbnailSizing.pixelSize(
+            for: collectionView
+        )
         for indexPath in indexPaths {
             guard indexPath.section < sections.count,
                   indexPath.item < sections[indexPath.section].videos.count
@@ -33,7 +43,11 @@ extension VideosViewController: UICollectionViewDataSourcePrefetching {
             }
             let video = video(at: indexPath)
             if let url = URL(string: video.thumbnailURL) {
-                ThumbnailImageView.cancelPrefetch(url: url)
+                ThumbnailImageView.cancelPrefetch(
+                    url: url,
+                    videoId: video.isShort ? nil : video.id,
+                    maxPixelSize: pixelSize
+                )
             }
         }
     }

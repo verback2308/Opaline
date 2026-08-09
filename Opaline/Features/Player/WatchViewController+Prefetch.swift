@@ -9,8 +9,14 @@ extension WatchViewController: UICollectionViewDataSourcePrefetching {
         _ collectionView: UICollectionView,
         prefetchItemsAt indexPaths: [IndexPath]
     ) {
+        let pixelSize = ThumbnailSizing.pixelSize(
+            for: collectionView
+        )
         for url in thumbnailURLs(at: indexPaths) {
-            ThumbnailImageView.prefetch(url: url)
+            ThumbnailImageView.prefetch(
+                url: url,
+                maxPixelSize: pixelSize
+            )
         }
     }
 
@@ -18,8 +24,14 @@ extension WatchViewController: UICollectionViewDataSourcePrefetching {
         _ collectionView: UICollectionView,
         cancelPrefetchingForItemsAt indexPaths: [IndexPath]
     ) {
+        let pixelSize = ThumbnailSizing.pixelSize(
+            for: collectionView
+        )
         for url in thumbnailURLs(at: indexPaths) {
-            ThumbnailImageView.cancelPrefetch(url: url)
+            ThumbnailImageView.cancelPrefetch(
+                url: url,
+                maxPixelSize: pixelSize
+            )
         }
     }
 

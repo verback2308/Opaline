@@ -7,9 +7,8 @@ extension InnertubeClient {
         if let dict = value as? [String: Any] {
             if let thumbs = dict["thumbnails"]
                 as? [[String: Any]],
-               let url = thumbs.last?["url"] as? String,
-               !url.isEmpty {
-                return normalizeThumbnailURL(url)
+               let url = bestThumbnailURL(from: thumbs) {
+                return url
             }
             // ViewModel-era image shape: image.sources[].url
             if let sources = dict["sources"]
@@ -46,17 +45,50 @@ extension InnertubeClient {
         return url
     }
 
+    /// Picks the largest `thumbnails` entry by pixel area. `.last` is not
+    /// reliably the highest resolution — home feed entries are often mqdefault
+    /// (320×180) at the end while smaller sizes come first.
+    static func bestThumbnailURL(
+        from thumbs: [[String: Any]]
+    ) -> String? {
+        var bestURL: String?
+        var bestPixels = 0
+        for thumb in thumbs {
+            guard let url = thumb["url"] as? String,
+                  !url.isEmpty
+            else {
+                continue
+            }
+            let width = thumb["width"] as? Int ?? 0
+            let height = thumb["height"] as? Int ?? 0
+            let pixels = width * height
+            if pixels > bestPixels {
+                bestPixels = pixels
+                bestURL = url
+            }
+        }
+        if let bestURL {
+            return normalizeThumbnailURL(bestURL)
+        }
+        if let url = thumbs.last?["url"] as? String,
+           !url.isEmpty {
+            return normalizeThumbnailURL(url)
+        }
+        return nil
+    }
+
     static func preferredThumbnailURL(
         videoId: String,
         fallbackURL: String
     ) -> String {
-        guard !videoId.isEmpty
-        else {
-            return normalizeThumbnailURL(fallbackURL)
+        let normalized = normalizeThumbnailURL(fallbackURL)
+        if !normalized.isEmpty {
+            return normalized
         }
-        return AppURLs.YouTube.thumbnailURL(
-            videoId: videoId
-        )
+        guard !videoId.isEmpty else {
+            return normalized
+        }
+        return AppURLs.YouTube.thumbnailURL(videoId: videoId)
     }
 
     static func logThumbnailChoice(
@@ -75,7 +107,7 @@ extension InnertubeClient {
         guard let dict = value as? [String: Any],
               let thumbs = dict["thumbnails"]
                 as? [[String: Any]],
-              let url = thumbs.last?["url"] as? String
+              let url = bestThumbnailURL(from: thumbs)
         else {
             return ""
         }

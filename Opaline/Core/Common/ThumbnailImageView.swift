@@ -1,19 +1,34 @@
 import UIKit
 
 class ThumbnailImageView: UIImageView {
-    static let cache = ImageMemoryCache()
-    static let diskCache = ImageDiskCache()
-    /// Injectable transport for image fetches (media plane, undecorated).
-    static var transport: HTTPTransport = ServiceContainer.mediaTransport
-
-    /// Maximum pixel dimension for downsampling.
-    /// Thumbnails get 640, avatars get 96.
-    var maxPixelSize: Int = 640
-
     private var currentURL: URL?
+    private var currentVideoId: String?
     private var loadToken: CancellationToken?
     private var fallbackImage: UIImage?
     private var isShowingFallback = false
+    private var currentPixelSize = 0
+
+    /// Zero derives the decode target from the displayed thumbnail width.
+    /// Set an explicit value for small fixed assets such as avatars.
+    var maxPixelSize: Int = 0 {
+        didSet {
+            guard oldValue != maxPixelSize else {
+                return
+            }
+            startLoadingIfNeeded()
+        }
+    }
+
+    private var effectivePixelSize: Int {
+        if maxPixelSize > 0 {
+            return min(maxPixelSize, ThumbnailSizing.maximumPixelSize)
+        }
+        let scale = window?.screen.scale ?? UIScreen.main.scale
+        return ThumbnailSizing.pixelSize(
+            forDisplayWidth: bounds.width,
+            scale: scale
+        )
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -27,7 +42,16 @@ class ThumbnailImageView: UIImageView {
         fatalError("init(coder:) is not supported")
     }
 
-    func setImage(url: URL, fallback: UIImage? = nil) {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        startLoadingIfNeeded()
+    }
+
+    func setImage(
+        url: URL,
+        videoId: String? = nil,
+        fallback: UIImage? = nil
+    ) {
         fallbackImage = fallback
         // Deliberately keyed on content, not just the URL: callers clear
         // `image` and then re-set the same URL to force a reload (see
@@ -35,219 +59,81 @@ class ThumbnailImageView: UIImageView {
         // those views permanently blank.
         let hasContent = (image != nil && !isShowingFallback)
             || loadToken != nil
-        if currentURL == url, hasContent {
+        if currentURL == url,
+           currentVideoId == videoId,
+           hasContent {
             return
         }
         loadToken?.cancel()
         loadToken = nil
         currentURL = url
+        currentVideoId = videoId
         if let fallback {
             image = fallback
             isShowingFallback = true
         }
-        loadFromMemoryOrDisk(url: url)
+        currentPixelSize = 0
+        startLoadingIfNeeded()
     }
 
-    private func loadFromMemoryOrDisk(url: URL) {
-        let key = url.absoluteString
-        if let cached = ThumbnailImageView.cache.object(
-            forKey: key
-        ) {
-            Self.logLoad("mem", since: nil, url: url)
-            image = cached
-            isShowingFallback = false
-            loadToken = nil
+    private func startLoadingIfNeeded() {
+        guard let url = currentURL else {
             return
         }
-        ThumbnailImageView.decodeQueue.async { [weak self] in
-            guard let self,
-                  currentURL == url
-            else {
-                return
-            }
-            loadFromDiskOrNetwork(
-                url: url, cacheKey: key
-            )
-        }
-    }
-
-    private func loadFromDiskOrNetwork(
-        url: URL,
-        cacheKey: String
-    ) {
-        if ThumbnailImageView.cachingEnabled,
-           let fileURL = ThumbnailImageView.diskCache
-               .fileURL(for: url) {
-            handleDiskHit(
-                url: url,
-                fileURL: fileURL,
-                cacheKey: cacheKey
-            )
+        guard maxPixelSize > 0 || bounds.width > 0 else {
             return
         }
-        clearImageOnMain(url: url)
-        fetchFromNetwork(url: url, cacheKey: cacheKey)
-    }
-
-    private func handleDiskHit(
-        url: URL,
-        fileURL: URL,
-        cacheKey: String
-    ) {
-        let maxSz = maxPixelSize
-        let t0 = Date()
-        guard let img = ThumbnailImageView.downsample(
-            imageAt: fileURL, to: maxSz
-        ) else {
+        let target = effectivePixelSize
+        guard shouldStartLoading(target: target) else {
             return
         }
-        Self.logLoad("disk", since: t0, url: url)
-        ThumbnailImageView.cache.setObject(
-            img,
-            forKey: cacheKey,
-            cost: img.memoryCost
-        )
-        DispatchQueue.main.async { [weak self] in
-            guard self?.currentURL == url else {
-                return
-            }
-            self?.loadToken = nil
-            self?.image = img
-            self?.isShowingFallback = false
-        }
-    }
-
-    /// Before a network fetch: show the fallback (if any) so a
-    /// failed load leaves the monogram, not an empty view.
-    private func clearImageOnMain(url: URL) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self,
-                  currentURL == url
-            else {
-                return
-            }
-            if let fallbackImage {
-                image = fallbackImage
-                isShowingFallback = true
-            } else {
-                image = nil
-            }
-        }
-    }
-
-    private func fetchFromNetwork(
-        url: URL,
-        cacheKey: String
-    ) {
-        let maxSz = maxPixelSize
-        let token = CancellationToken()
-        loadToken = token
-        let t0 = Date()
-        Self.transport.send(
-            HTTPRequest(method: .get, url: url),
-            cancellationToken: token
+        loadToken?.cancel()
+        currentPixelSize = target
+        loadToken = ThumbnailLoader.shared.load(
+            url: url,
+            maxPixelSize: target,
+            videoId: currentVideoId
         ) { [weak self] result in
-            Self.logLoad("net", since: t0, url: url)
-            self?.handleNetworkResponse(
-                data: try? result.get().data,
+            self?.handleLoadResult(
+                result,
                 url: url,
-                cacheKey: cacheKey,
-                maxPixelSize: maxSz
+                target: target
             )
         }
     }
 
-    private func handleNetworkResponse(
-        data: Data?,
+    private func shouldStartLoading(target: Int) -> Bool {
+        target > 0
+            && (currentPixelSize != target
+                || (loadToken == nil && image == nil))
+    }
+
+    private func handleLoadResult(
+        _ result: Result<ThumbnailLoadResult, Error>,
         url: URL,
-        cacheKey: String,
-        maxPixelSize: Int
+        target: Int
     ) {
-        defer { clearTaskOnMain(url: url) }
-        guard let data,
-              currentURL == url
+        guard currentURL == url,
+              currentPixelSize == target
         else {
             return
         }
-        // Off the transport's callback thread and onto the one decode
-        // queue, so a page of arriving thumbnails can't swamp the CPU.
-        ThumbnailImageView.decodeQueue.async { [weak self] in
-            self?.cacheDownsampled(
-                data: data,
-                url: url,
-                cacheKey: cacheKey,
-                maxPixelSize: maxPixelSize
-            )
+        loadToken = nil
+        guard case .success(let loaded) = result else {
+            return
         }
-    }
-
-    private func clearTaskOnMain(url: URL) {
-        DispatchQueue.main.async { [weak self] in
-            guard self?.currentURL == url else {
-                return
-            }
-            self?.loadToken = nil
-        }
-    }
-
-    private func cacheDownsampled(
-        data: Data,
-        url: URL,
-        cacheKey: String,
-        maxPixelSize: Int
-    ) {
-        if let img = ThumbnailImageView.downsample(
-            data: data, to: maxPixelSize
-        ) {
-            ThumbnailImageView.cache.setObject(
-                img,
-                forKey: cacheKey,
-                cost: img.memoryCost
-            )
-        }
-        if ThumbnailImageView.cachingEnabled {
-            ThumbnailImageView.diskCache.store(
-                data: data, for: url
-            )
-        }
-        DispatchQueue.main.async { [weak self] in
-            guard let self,
-                  currentURL == url,
-                  let img = ThumbnailImageView.cache
-                  .object(forKey: cacheKey)
-            else {
-                return
-            }
-            image = img
-            isShowingFallback = false
-        }
-    }
-}
-
-extension ThumbnailImageView {
-    static var cachingEnabled: Bool {
-        UserDefaults.standard.object(
-            forKey: UserDefaultsKeys.Cache.imageCacheEnabled
-        ) as? Bool ?? true
-    }
-
-    static func clearCache() {
-        AppLog.img("clear all")
-        cache.removeAll()
-        diskCache.clear()
-    }
-
-    static func invalidate(url: String) {
-        cache.remove(url: url)
-        diskCache.remove(url: url)
+        image = loaded.image
+        isShowingFallback = false
     }
 
     func cancel() {
         loadToken?.cancel()
         loadToken = nil
         currentURL = nil
+        currentVideoId = nil
         fallbackImage = nil
         isShowingFallback = false
+        currentPixelSize = 0
         image = nil
     }
 

@@ -149,7 +149,10 @@ class SubscriptionVideoCell: UITableViewCell {
         )
 
         if let url = URL(string: video.thumbnailURL) {
-            thumbnail.setImage(url: url)
+            thumbnail.setImage(
+                url: url,
+                videoId: video.isShort ? nil : video.id
+            )
         }
         applyWatchProgress(videoId: video.id)
         cachedTitleHeight = 0

@@ -56,6 +56,10 @@ class VideoCell: UICollectionViewCell {
         } else {
             layoutGrid(cellWidth: cellWidth)
         }
+        thumbnail.maxPixelSize = ThumbnailSizing.pixelSize(
+            forDisplayWidth: thumbnail.bounds.width,
+            scale: window?.screen.scale ?? UIScreen.main.scale
+        )
         layoutProgress()
     }
 
@@ -341,7 +345,10 @@ extension VideoCell {
             liveBadgeView: liveBadgeView
         )
         if let url = URL(string: video.thumbnailURL) {
-            thumbnail.setImage(url: url)
+            thumbnail.setImage(
+                url: url,
+                videoId: video.isShort ? nil : video.id
+            )
         }
         applyWatchProgress(videoId: video.id)
         cachedTitleHeight = 0

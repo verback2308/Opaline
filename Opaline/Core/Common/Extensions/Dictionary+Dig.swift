@@ -77,8 +77,13 @@ extension Dictionary where Key == String, Value == Any {
                 .joined()
     }
 
-    /// Returns the last thumbnail URL from a `thumbnails` array keyed by `key`.
+    /// Returns the highest-resolution thumbnail URL from a `thumbnails` array.
     func thumbnailURL(_ key: String = "thumbnail") -> String? {
-        ((self[key] as? [String: Any])?["thumbnails"] as? [[String: Any]])?.last?["url"] as? String
+        guard let thumbs = (self[key] as? [String: Any])?["thumbnails"]
+            as? [[String: Any]]
+        else {
+            return nil
+        }
+        return InnertubeClient.bestThumbnailURL(from: thumbs)
     }
 }
