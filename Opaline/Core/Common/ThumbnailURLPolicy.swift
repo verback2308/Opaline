@@ -3,7 +3,8 @@ import UIKit
 
 enum ThumbnailSizing {
     static let defaultPixelSize = 640
-    static let maximumPixelSize = 1_280
+    private static let decodeSteps = [320, 640, 960]
+    static let maximumPixelSize = decodeSteps.last ?? defaultPixelSize
 
     static func pixelSize(
         forDisplayWidth width: CGFloat,
@@ -13,7 +14,8 @@ enum ThumbnailSizing {
             return defaultPixelSize
         }
         let pixels = Int(ceil(width * max(scale, 1)))
-        return min(max(pixels, 1), maximumPixelSize)
+        return decodeSteps.first { $0 >= pixels }
+            ?? maximumPixelSize
     }
 
     static func pixelSize(
