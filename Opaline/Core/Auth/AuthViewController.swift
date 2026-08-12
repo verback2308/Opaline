@@ -6,14 +6,17 @@ final class AuthViewController: UIViewController {
     var onContinueAnonymously: (() -> Void)?
 
     private let titleLabel = UILabel()
-    private let instructionLabel = UILabel()
-    private let codeLabel = UILabel()
-    private let statusLabel = UILabel()
-    private let openButton = UIButton(type: .system)
+    let instructionLabel = UILabel()
+    let codeLabel = UILabel()
+    let statusLabel = UILabel()
+    let openButton = UIButton(type: .system)
+    let copyButton = UIButton(type: .system)
     private let anonymousButton = UIButton(type: .system)
-    private let spinner = UIActivityIndicatorView(style: .white)
+    let spinner = UIActivityIndicatorView(style: .white)
+    private let contentStack = UIStackView()
 
-    private var verificationURL: URL?
+    var verificationURL: URL?
+    var retryCount = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,6 +30,7 @@ final class AuthViewController: UIViewController {
         configureButtons()
         configureSpinner()
         addControlSubviews()
+        configureStack()
         layoutTitleAndCode()
         layoutButtonsAndStatus()
     }
@@ -34,11 +38,29 @@ final class AuthViewController: UIViewController {
     @objc
     private func openVerificationURL() {
         guard let url = verificationURL else {
+            restartAuth()
             return
         }
         UIPasteboard.general.string = codeLabel.text
-        let safari = SFSafariViewController(url: url)
+        let safari = SFSafariViewController(url: localized(url))
         present(safari, animated: true)
+    }
+
+    /// Google picks the page language from the IP, not from
+    /// `Accept-Language` — a Japanese user on a foreign network lands on a
+    /// page they cannot read. `hl` overrides that with the app's language.
+    private func localized(_ url: URL) -> URL {
+        guard let code = AppLanguage.override?.rawValue
+            ?? Locale.preferredLanguages.first,
+            var components = URLComponents(
+                url: url, resolvingAgainstBaseURL: false
+            ) else {
+            return url
+        }
+        var items = components.queryItems ?? []
+        items.append(URLQueryItem(name: "hl", value: code))
+        components.queryItems = items
+        return components.url ?? url
     }
 
     @objc
@@ -55,17 +77,17 @@ final class AuthViewController: UIViewController {
 // MARK: - Configuration
 private extension AuthViewController {
     func configureLabels() {
-        titleLabel.text = "Sign in to YouTube"
+        titleLabel.text = "auth.title".localized
         titleLabel.textColor = .white
         titleLabel.font = UIFont.boldSystemFont(ofSize: 22)
         titleLabel.textAlignment = .center
 
-        instructionLabel.text = "Tap the button below,"
-            + " then paste your code on the page that opens."
+        instructionLabel.text = "auth.instruction".localized
         instructionLabel.textColor = .lightGray
         instructionLabel.font = UIFont.systemFont(ofSize: 15)
         instructionLabel.textAlignment = .center
         instructionLabel.numberOfLines = 0
+        instructionLabel.isHidden = true
 
         codeLabel.textColor = .white
         codeLabel.font = UIFont(
@@ -74,20 +96,22 @@ private extension AuthViewController {
         ) ?? UIFont.boldSystemFont(ofSize: 36)
         codeLabel.textAlignment = .center
 
-        statusLabel.text = "Fetching code..."
+        statusLabel.text = "auth.fetchingCode".localized
         statusLabel.textColor = .lightGray
         statusLabel.font = UIFont.systemFont(ofSize: 14)
         statusLabel.textAlignment = .center
+        statusLabel.numberOfLines = 0
     }
 
     func configureButtons() {
+        configureCopyButton()
         configureOpenButton()
         configureAnonymousButton()
     }
 
     func configureOpenButton() {
         openButton.setTitle(
-            "Open google.com/device",
+            "auth.openDevicePage".localized,
             for: .normal
         )
         openButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
@@ -107,7 +131,7 @@ private extension AuthViewController {
 
     func configureAnonymousButton() {
         anonymousButton.setTitle(
-            "Continue Anonymously",
+            "auth.continueAnonymously".localized,
             for: .normal
         )
         anonymousButton.titleLabel?.font = UIFont.systemFont(ofSize: 15)
@@ -127,11 +151,24 @@ private extension AuthViewController {
         spinner.startAnimating()
     }
 
-    func addControlSubviews() {
-        let views: [UIView] = [
-            titleLabel, instructionLabel, codeLabel,
-            openButton, statusLabel, spinner, anonymousButton
+    /// A stack, not constraints: hiding the code, its copy button or the
+    /// instruction has to close the gap they leave behind.
+    func configureStack() {
+        contentStack.axis = .vertical
+        contentStack.alignment = .center
+        contentStack.spacing = 16
+        let arranged: [UIView] = [
+            codeLabel, copyButton, instructionLabel,
+            openButton, statusLabel, spinner
         ]
+        arranged.forEach(contentStack.addArrangedSubview)
+        contentStack.setCustomSpacing(8, after: codeLabel)
+        contentStack.setCustomSpacing(28, after: instructionLabel)
+        contentStack.setCustomSpacing(28, after: openButton)
+    }
+
+    func addControlSubviews() {
+        let views: [UIView] = [titleLabel, contentStack, anonymousButton]
         views.forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
@@ -142,9 +179,7 @@ private extension AuthViewController {
 // MARK: - Layout
 private extension AuthViewController {
     func layoutTitleAndCode() {
-        let padding: CGFloat = 40
-        layoutTitleConstraints(padding: padding)
-        layoutInstructionConstraints(padding: padding)
+        layoutTitleConstraints(padding: 40)
     }
 
     func layoutTitleConstraints(padding: CGFloat) {
@@ -163,78 +198,30 @@ private extension AuthViewController {
             titleLabel.trailingAnchor.constraint(
                 equalTo: view.trailingAnchor,
                 constant: -padding
-            ),
-            codeLabel.centerXAnchor.constraint(
-                equalTo: view.centerXAnchor
-            ),
-            codeLabel.topAnchor.constraint(
-                equalTo: titleLabel.bottomAnchor,
-                constant: 48
-            )
-        ])
-    }
-
-    func layoutInstructionConstraints(padding: CGFloat) {
-        NSLayoutConstraint.activate([
-            instructionLabel.centerXAnchor.constraint(
-                equalTo: view.centerXAnchor
-            ),
-            instructionLabel.topAnchor.constraint(
-                equalTo: codeLabel.bottomAnchor,
-                constant: 20
-            ),
-            instructionLabel.leadingAnchor.constraint(
-                equalTo: view.leadingAnchor,
-                constant: padding
-            ),
-            instructionLabel.trailingAnchor.constraint(
-                equalTo: view.trailingAnchor,
-                constant: -padding
             )
         ])
     }
 
     func layoutButtonsAndStatus() {
         let padding: CGFloat = 40
-        layoutOpenAndStatusConstraints(padding: padding)
-        layoutBottomConstraints()
-    }
-
-    func layoutOpenAndStatusConstraints(padding: CGFloat) {
         NSLayoutConstraint.activate([
-            openButton.centerXAnchor.constraint(
+            contentStack.centerXAnchor.constraint(
                 equalTo: view.centerXAnchor
             ),
-            openButton.topAnchor.constraint(
-                equalTo: instructionLabel.bottomAnchor,
-                constant: 32
+            contentStack.topAnchor.constraint(
+                equalTo: titleLabel.bottomAnchor,
+                constant: 48
             ),
-            statusLabel.centerXAnchor.constraint(
-                equalTo: view.centerXAnchor
-            ),
-            statusLabel.topAnchor.constraint(
-                equalTo: openButton.bottomAnchor,
-                constant: 32
-            ),
-            statusLabel.leadingAnchor.constraint(
+            contentStack.leadingAnchor.constraint(
                 equalTo: view.leadingAnchor,
                 constant: padding
             ),
-            statusLabel.trailingAnchor.constraint(
+            contentStack.trailingAnchor.constraint(
                 equalTo: view.trailingAnchor,
                 constant: -padding
-            )
-        ])
-    }
-
-    func layoutBottomConstraints() {
-        NSLayoutConstraint.activate([
-            spinner.centerXAnchor.constraint(
-                equalTo: view.centerXAnchor
             ),
-            spinner.topAnchor.constraint(
-                equalTo: statusLabel.bottomAnchor,
-                constant: 16
+            instructionLabel.widthAnchor.constraint(
+                equalTo: contentStack.widthAnchor
             ),
             anonymousButton.centerXAnchor.constraint(
                 equalTo: view.centerXAnchor
@@ -244,53 +231,5 @@ private extension AuthViewController {
                 constant: -28
             )
         ])
-    }
-}
-
-// MARK: - Auth Flow
-private extension AuthViewController {
-    func startAuth() {
-        OAuthClient.shared.requestDeviceCode { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .failure(let error):
-                    self?.statusLabel.text =
-                        "Error: \(error.localizedDescription)"
-                    self?.spinner.stopAnimating()
-                case .success(let code):
-                    self?.handleDeviceCode(code)
-                }
-            }
-        }
-    }
-
-    func handleDeviceCode(_ code: OAuthClient.DeviceCodeResponse) {
-        codeLabel.text = code.userCode
-        verificationURL = URL(string: code.verificationURL)
-        openButton.isHidden = false
-        statusLabel.text = "Waiting for authorization..."
-
-        let config = OAuthClient.PollConfig(
-            deviceCode: code.deviceCode,
-            clientId: code.clientId,
-            clientSecret: code.clientSecret,
-            interval: code.interval
-        )
-        OAuthClient.shared.pollForToken(
-            config: config
-        ) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    OAuthClient.shared.isAnonymous = false
-                    UserProfileStore.shared.load()
-                    self?.onAuthorized?()
-                case .failure(let error):
-                    self?.statusLabel.text =
-                        "Failed: \(error.localizedDescription)"
-                    self?.spinner.stopAnimating()
-                }
-            }
-        }
     }
 }

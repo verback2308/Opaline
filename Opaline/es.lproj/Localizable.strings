@@ -421,3 +421,35 @@
 "notifications.permissionBanner.enable" = "Activar notificaciones";
 /* Detail screen action opening the notification's link */
 "notifications.detail.openLink" = "Abrir";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "Acceder a YouTube";
+"auth.instruction" = "Toca el botón de abajo y pega el código en la página que se abre.";
+"auth.openDevicePage" = "Abrir google.com/device";
+"auth.continueAnonymously" = "Continuar de forma anónima";
+"auth.copyCode" = "Copiar código";
+"auth.codeCopied" = "Código copiado";
+"auth.fetchingCode" = "Obteniendo código…";
+"auth.waiting" = "Esperando confirmación…";
+"auth.failed" = "No se pudo acceder";
+"auth.tryAgain" = "Reintentar";
+"auth.offline" = "Sin conexión";
+
+/* ===== Shorts settings, comments and shared actions ===== */
+
+"channel.tab.shorts" = "Shorts";
+"shorts.shelf.title" = "Shorts";
+"common.close" = "Cerrar";
+"common.delete" = "Borrar";
+"common.edit" = "Editar";
+"player.menu.queue" = "Cola";
+"player.comments.viewReplies" = "Ver respuestas";
+"player.comments.hideReplies" = "Ocultar respuestas";
+"player.comments.moreReplies" = "Mostrar más respuestas";
+"settings.row.shortsPlayer" = "Abrir los Shorts en";
+"settings.shortsPlayer.vertical" = "Reproductor vertical";
+"settings.shortsPlayer.regular" = "Reproductor normal";
+"settings.row.shortsGrouping" = "Agrupar en Suscripciones";
+"settings.footer.shorts" = "Al agrupar, cada página del feed de suscripciones se recoge en su propia sección de Shorts. Desactívalo para ver los Shorts intercalados como vídeos normales.";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

@@ -4,9 +4,11 @@ import UIKit
 /// one rail per shelf section in the `.rails` home layout.
 final class ShelfRailCell: UICollectionViewCell {
     static let reuseId = "ShelfRailCell"
-    static let itemWidth: CGFloat = 280
-    static var itemHeight: CGFloat { itemWidth * 9 / 16 + 92 }
-    static var railHeight: CGFloat { itemHeight }
+    /// Horizontal inset of the rail's own content.
+    private static let sideInset: CGFloat = 8
+    private static let spacing: CGFloat = 8
+    /// Slice of the next card left visible so the rail reads as scrollable.
+    private static let peek: CGFloat = 40
 
     var onVideoTap: ((Video) -> Void)?
     var onChannelTap: ((Video) -> Void)?
@@ -19,13 +21,12 @@ final class ShelfRailCell: UICollectionViewCell {
     private lazy var listView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
-        layout.itemSize = CGSize(
-            width: Self.itemWidth,
-            height: Self.itemHeight
-        )
-        layout.minimumLineSpacing = 8
+        layout.minimumLineSpacing = Self.spacing
         layout.sectionInset = UIEdgeInsets(
-            top: 0, left: 8, bottom: 0, right: 8
+            top: 0,
+            left: Self.sideInset,
+            bottom: 0,
+            right: Self.sideInset
         )
         let cv = UICollectionView(
             frame: .zero,
@@ -57,6 +58,35 @@ final class ShelfRailCell: UICollectionViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
+    }
+
+    /// Cards are sized off the rail's width so the peek stays constant
+    /// instead of a fixed width leaving most of the next card offscreen.
+    static func itemSize(forRailWidth railWidth: CGFloat) -> CGSize {
+        let available = railWidth - sideInset * 2 - peek
+        let columns = max(1, floor(available / 300))
+        let width = floor(
+            (available - spacing * (columns - 1)) / columns
+        )
+        return CGSize(width: width, height: floor(width * 9 / 16) + 92)
+    }
+
+    static func railHeight(forWidth width: CGFloat) -> CGFloat {
+        itemSize(forRailWidth: width).height
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let layout = listView.collectionViewLayout
+            as? UICollectionViewFlowLayout
+        else {
+            return
+        }
+        let size = Self.itemSize(forRailWidth: bounds.width)
+        if layout.itemSize != size {
+            layout.itemSize = size
+            layout.invalidateLayout()
+        }
     }
 
     func configure(with videos: [Video]) {

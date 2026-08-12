@@ -47,6 +47,10 @@ enum UserDefaultsKeys {
 
     enum Feed {
         static let showShorts = "feed_showShorts"
+        /// `ShortsPlayerMode` raw value; absent = vertical viewer.
+        static let shortsPlayer = "feed_shortsPlayer"
+        /// Shorts shelf in the subscriptions feed; absent = grouped.
+        static let groupShorts = "feed_groupShorts"
         static let homeLayout = "feed_homeLayout"
         /// `DefaultTab` raw value (= tab tag); absent = Home.
         static let defaultTab = "feed_defaultTab"

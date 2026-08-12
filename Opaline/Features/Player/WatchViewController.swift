@@ -88,15 +88,15 @@ final class WatchViewController: UIViewController {
     var autoplayOverlay: AutoplayOverlayView?
     let playbackFacade = PlaybackFacade()
     var pageLoadToken = CancellationToken()
-    var isOuterScrollViewDragging = false
-    var didSeekToSavedPosition = false
+    var isOuterScrollViewDragging = false, didSeekToSavedPosition = false
     var captionTracks: [SubtitleTrack] = []
     var activeSubtitleLanguage: String?
     var backgroundEnteredAt: Date?
     var savedPlayerForBackground: AVPlayer?
-    var isRecoveringPlayback = false
-    var hasSeenPlaybackError = false
-    var recoveryTargetSeconds: Double?
+    var isRecoveringPlayback = false, hasSeenPlaybackError = false
+    /// Frozen during a recovery seek: a fresh item's zeroed clock must not
+    /// overwrite where the user actually was.
+    var lastPlaybackPosition = 0.0, pendingRecoverySeek = false
     let queue = PlaybackQueue.shared
 
     // MARK: - UI Elements

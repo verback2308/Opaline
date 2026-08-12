@@ -1,8 +1,8 @@
 import Foundation
 
 /// Minimal parser for YouTube's public per-channel Atom feed
-/// (`/feeds/videos.xml?channel_id=...`): extracts each entry's video id
-/// and exact publish date; every other field is ignored.
+/// (`/feeds/videos.xml?channel_id=...`): extracts each entry's video id,
+/// title, exact publish date and view count; the rest is ignored.
 enum ChannelRSSParser {
     /// nil when the document isn't parseable XML.
     static func parse(_ data: Data) -> [RSSVideoEntry]? {
@@ -22,6 +22,8 @@ private final class FeedDelegate: NSObject, XMLParserDelegate {
     private var currentElement = ""
     private var videoId = ""
     private var published = ""
+    private var title = ""
+    private var viewCount: Int?
     private let dateFormatter = ISO8601DateFormatter()
 
     func parser(
@@ -35,6 +37,11 @@ private final class FeedDelegate: NSObject, XMLParserDelegate {
             insideEntry = true
             videoId = ""
             published = ""
+            title = ""
+            viewCount = nil
+        }
+        if insideEntry, elementName == "media:statistics" {
+            viewCount = (attributeDict["views"]).flatMap(Int.init)
         }
         currentElement = elementName
     }
@@ -48,6 +55,8 @@ private final class FeedDelegate: NSObject, XMLParserDelegate {
             videoId += string
         case "published":
             published += string
+        case "title":
+            title += string
         default:
             break
         }
@@ -73,6 +82,13 @@ private final class FeedDelegate: NSObject, XMLParserDelegate {
         else {
             return
         }
-        entries.append(RSSVideoEntry(videoId: id, published: date))
+        entries.append(
+            RSSVideoEntry(
+                videoId: id,
+                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                published: date,
+                viewCount: viewCount
+            )
+        )
     }
 }

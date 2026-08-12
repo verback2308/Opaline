@@ -56,7 +56,7 @@ extension InnertubeClient {
             recordShelf(title, added: added, content: sc, into: &acc)
         }
         AppLog.innertube(
-            "shelf '\(title ?? "?")': +\(added) videos"
+            "shelf '\(title ?? "?")': +\(added) videos shorts=\(isShorts)"
         )
     }
 

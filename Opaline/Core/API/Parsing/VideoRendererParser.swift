@@ -52,12 +52,17 @@ enum VideoRendererParserChain {
     }
 
     /// Returns true if `item` is a YouTube Short.
-    /// A short reaches us in four shapes, depending on client and surface:
+    /// A short reaches us in three shapes, depending on client and surface:
     ///   • a dedicated `reelItemRenderer` / `shortsLockupViewModel`
     ///   • either of those wrapped in a `richItemRenderer`
     ///   • an ordinary video renderer (web/compact/grid/tile) whose
-    ///     navigation points at a `reelWatchEndpoint` — this is how the
-    ///     subscriptions feed serves them
+    ///     navigation points at a `reelWatchEndpoint`, or whose overlay is
+    ///     styled SHORTS
+    ///
+    /// TV subscription tiles carry none of these — nothing in the tile tells
+    /// a short from an hour-long stream (contentType, style and
+    /// ustreamerConfig are identical, device-checked 2026-08-11). There, only
+    /// the Shorts shelf gives them away; see `InnertubeClient.appendSection`.
     static func isShortFeedItem(_ item: [String: Any]) -> Bool {
         let content = item.digDict(RendererKey.richItem, JSONKey.content)
             ?? item
@@ -71,9 +76,6 @@ enum VideoRendererParserChain {
         }) {
             return true
         }
-        // TV history hands shorts over as ordinary tiles pointing at the
-        // watch page; the badge where a duration would sit is all that says
-        // otherwise, and without it they opened in the wide player.
         return extractOverlays(from: item).contains { overlay in
             (overlay[RendererKey.thumbnailOverlayTimeStatus]
                 as? [String: Any])?["style"] as? String == "SHORTS"
@@ -100,33 +102,34 @@ enum VideoRendererParserChain {
     }
 
     /// Convenience: maps a list of items to videos, skipping unrecognised items.
-    /// Shorts (reelItemRenderer) are excluded unless the showShorts setting is on.
+    /// Shorts are excluded unless the showShorts setting is on.
     /// Also extracts inline watch progress from thumbnail overlays.
     static func videos(from items: [[String: Any]]) -> [Video] {
-        let filtered = filtered(items)
-        return filtered.compactMap { item in
+        items.compactMap { item in
             if let parsed = video(from: item) {
                 storeInlineProgress(
                     item: item, videoId: parsed.id
                 )
-                return marked(parsed, item: item)
+                return kept(marked(parsed, item: item))
             }
             return nil
         }
     }
 
     /// Convenience: maps items to videos AND extracts the first continuation token found.
-    /// Shorts (reelItemRenderer) are excluded unless the showShorts setting is on.
+    /// Shorts are excluded unless the showShorts setting is on.
     /// Also extracts inline watch progress from thumbnail overlays.
     static func parse(items: [[String: Any]]) -> (videos: [Video], continuation: String?) {
         var videos: [Video] = []
         var continuation: String?
-        for item in filtered(items) {
+        for item in items {
             if let parsed = video(from: item) {
                 storeInlineProgress(
                     item: item, videoId: parsed.id
                 )
-                videos.append(marked(parsed, item: item))
+                if let kept = kept(marked(parsed, item: item)) {
+                    videos.append(kept)
+                }
             } else if continuation == nil,
                       let token = Self.continuation(from: item) {
                 continuation = token
@@ -238,13 +241,12 @@ enum VideoRendererParserChain {
         return short
     }
 
-    private static func filtered(_ items: [[String: Any]]) -> [[String: Any]] {
+    /// Drops shorts when the setting is off. Filtering the parsed video rather
+    /// than the raw item catches the ones flagged by their shelf as well.
+    private static func kept(_ video: Video) -> Video? {
         let showShorts = UserDefaults.standard.bool(
             forKey: UserDefaultsKeys.Feed.showShorts
         )
-        guard !showShorts else {
-            return items
-        }
-        return items.filter { !isShortFeedItem($0) }
+        return !showShorts && video.isShort ? nil : video
     }
 }

@@ -17,8 +17,10 @@ final class ShortsShelfCell: UITableViewCell {
     private static let headerHeight: CGFloat = 36
 
     var onSelect: ((Int) -> Void)?
+    var onSeeAll: (() -> Void)?
 
     private let titleLabel = UILabel()
+    private let seeAllButton = UIButton(type: .system)
     private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -33,6 +35,23 @@ final class ShortsShelfCell: UITableViewCell {
     }()
 
     private var shorts: [Video] = []
+
+    private var headerConstraints: [NSLayoutConstraint] {
+        [
+            titleLabel.leadingAnchor.constraint(
+                equalTo: contentView.leadingAnchor, constant: Self.inset
+            ),
+            titleLabel.topAnchor.constraint(
+                equalTo: contentView.topAnchor, constant: 8
+            ),
+            seeAllButton.trailingAnchor.constraint(
+                equalTo: contentView.trailingAnchor, constant: -Self.inset
+            ),
+            seeAllButton.centerYAnchor.constraint(
+                equalTo: titleLabel.centerYAnchor
+            )
+        ]
+    }
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -64,22 +83,34 @@ final class ShortsShelfCell: UITableViewCell {
         backgroundColor = theme.background
         contentView.backgroundColor = theme.background
         titleLabel.textColor = theme.primaryText
+        seeAllButton.setTitleColor(theme.secondaryText, for: .normal)
     }
 
-    private func setupViews() {
+    @objc
+    private func handleSeeAll() {
+        onSeeAll?()
+    }
+
+    private func setupHeader() {
         titleLabel.text = "shorts.shelf.title".localized
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        // Same wording as the channel bar's button — one "All" for the app.
+        seeAllButton.setTitle("subscriptions.allButton".localized, for: .normal)
+        seeAllButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+        seeAllButton.translatesAutoresizingMaskIntoConstraints = false
+        seeAllButton.addTarget(
+            self, action: #selector(handleSeeAll), for: .touchUpInside
+        )
+    }
+
+    private func setupViews() {
+        setupHeader()
         setupCollection()
         contentView.addSubview(titleLabel)
+        contentView.addSubview(seeAllButton)
         contentView.addSubview(collectionView)
-        NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(
-                equalTo: contentView.leadingAnchor, constant: Self.inset
-            ),
-            titleLabel.topAnchor.constraint(
-                equalTo: contentView.topAnchor, constant: 8
-            ),
+        NSLayoutConstraint.activate(headerConstraints + [
             collectionView.topAnchor.constraint(
                 equalTo: titleLabel.bottomAnchor, constant: 8
             ),

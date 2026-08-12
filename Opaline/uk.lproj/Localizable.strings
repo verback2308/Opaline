@@ -172,6 +172,11 @@
 "settings.row.hideStatusBar" = "Приховувати рядок стану в повноекранному режимі";
 "settings.row.zoomToFill" = "Заповнювати екран у повноекранному режимі";
 "settings.row.showShorts" = "Показувати Shorts";
+"settings.row.shortsPlayer" = "Відкривати Shorts у";
+"settings.shortsPlayer.vertical" = "Вертикальному плеєрі";
+"settings.shortsPlayer.regular" = "Звичайному плеєрі";
+"settings.row.shortsGrouping" = "Групувати в підписках";
+"settings.footer.shorts" = "При групуванні Shorts кожної завантаженої сторінки стрічки підписок збираються в окрему полицю. Вимкніть, щоб бачити Shorts у стрічці як звичайні відео.";
 "settings.row.autoplay" = "Автовідтворення";
 /* %1$@ = localized "Mix" term (player.related.mix) */
 "settings.row.autoplayMix" = "Автовідтворення (%1$@)";
@@ -311,6 +316,12 @@
 "account.signOut" = "Вийти";
 "account.notSignedIn" = "Вхід не виконано";
 
+/* Copies the OAuth device code shown on the sign-in screen */
+"auth.copyCode" = "Скопіювати код";
+/* Toast shown after the device code is copied */
+"auth.codeCopied" = "Код скопійовано";
+
+
 "common.error" = "Помилка";
 "channel.unavailable" = "Канал недоступний";
 
@@ -337,3 +348,23 @@
 "notifications.permissionBanner.message" = "Системні сповіщення вимкнені, тому оповіщення можуть не дійти поза додатком.";
 "notifications.permissionBanner.enable" = "Увімкнути сповіщення";
 "notifications.detail.openLink" = "Відкрити";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "Вхід у YouTube";
+"auth.instruction" = "Натисніть кнопку нижче й вставте код на сторінці, що відкриється.";
+"auth.openDevicePage" = "Відкрити google.com/device";
+"auth.continueAnonymously" = "Продовжити анонімно";
+"auth.fetchingCode" = "Отримання коду…";
+"auth.waiting" = "Очікування підтвердження…";
+"auth.failed" = "Не вдалося увійти";
+"auth.tryAgain" = "Повторити";
+"auth.offline" = "Немає з'єднання";
+
+/* ===== Shorts and shared actions ===== */
+
+"channel.tab.shorts" = "Відео Shorts";
+"shorts.shelf.title" = "Відео Shorts";
+"common.close" = "Закрити";
+"player.menu.queue" = "Черга";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

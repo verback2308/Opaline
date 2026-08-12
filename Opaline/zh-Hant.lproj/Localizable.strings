@@ -425,3 +425,35 @@
 "notifications.permissionBanner.enable" = "啟用通知";
 /* Detail screen action opening the notification's link */
 "notifications.detail.openLink" = "開啟";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "登入 YouTube";
+"auth.instruction" = "輕觸下方按鈕，然後在開啟的頁面貼上驗證碼。";
+"auth.openDevicePage" = "開啟 google.com/device";
+"auth.continueAnonymously" = "以匿名方式繼續";
+"auth.copyCode" = "複製驗證碼";
+"auth.codeCopied" = "已複製驗證碼";
+"auth.fetchingCode" = "正在取得驗證碼…";
+"auth.waiting" = "正在等待確認…";
+"auth.failed" = "登入失敗";
+"auth.tryAgain" = "再試一次";
+"auth.offline" = "沒有網路連線";
+
+/* ===== Shorts settings, comments and shared actions ===== */
+
+"channel.tab.shorts" = "Shorts";
+"shorts.shelf.title" = "Shorts";
+"common.close" = "關閉";
+"common.delete" = "刪除";
+"common.edit" = "編輯";
+"player.menu.queue" = "待播清單";
+"player.comments.viewReplies" = "查看回覆";
+"player.comments.hideReplies" = "隱藏回覆";
+"player.comments.moreReplies" = "顯示更多回覆";
+"settings.row.shortsPlayer" = "開啟 Shorts 的方式";
+"settings.shortsPlayer.vertical" = "直式播放器";
+"settings.shortsPlayer.regular" = "一般播放器";
+"settings.row.shortsGrouping" = "在訂閱內容中分組";
+"settings.footer.shorts" = "分組會將訂閱內容每一頁的 Shorts 收進獨立的區塊。關閉後，Shorts 會像一般影片一樣顯示在清單中。";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

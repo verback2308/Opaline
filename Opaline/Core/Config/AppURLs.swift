@@ -33,6 +33,18 @@ enum AppURLs {
                 string: base + "/feeds/videos.xml?playlist_id=" + playlistId
             )
         }
+
+        /// The mirror image: the undocumented `UUSH` system playlist holds
+        /// the channel's Shorts and nothing else. nil for non-`UC` ids.
+        static func channelShortsRSSFeedURL(channelId: String) -> URL? {
+            guard channelId.hasPrefix("UC") else {
+                return nil
+            }
+            let playlistId = "UUSH" + channelId.dropFirst(2)
+            return URL(
+                string: base + "/feeds/videos.xml?playlist_id=" + playlistId
+            )
+        }
     }
 
     enum YouTubeOAuth {

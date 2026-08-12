@@ -5,8 +5,17 @@ import UIKit
 /// card, only the layout around it differs.
 final class ShortThumbnailCell: UICollectionViewCell {
     static let reuseIdentifier = "ShortThumbnailCell"
-    /// Height the title and view count add below the poster.
-    static let captionHeight: CGFloat = 46
+    private static let titleFont = UIFont.systemFont(ofSize: 13, weight: .medium)
+    private static let viewsFont = UIFont.systemFont(ofSize: 12)
+    private static let posterGap: CGFloat = 6
+    private static let labelGap: CGFloat = 4
+
+    /// Height the title and view count add below the poster. Derived from
+    /// the fonts, so the view count can't end up clipped again when one of
+    /// them changes.
+    static let captionHeight: CGFloat = ceil(
+        posterGap + titleFont.lineHeight * 2 + labelGap + viewsFont.lineHeight
+    )
     /// Shorts are 9:16; the poster keeps that ratio at any width.
     static let aspectRatio: CGFloat = 16.0 / 9.0
 
@@ -61,16 +70,16 @@ final class ShortThumbnailCell: UICollectionViewCell {
         poster.contentMode = .scaleAspectFill
         poster.layer.cornerRadius = 8
         poster.clipsToBounds = true
-        titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        titleLabel.font = Self.titleFont
         titleLabel.numberOfLines = 2
-        viewsLabel.font = .systemFont(ofSize: 12)
+        viewsLabel.font = Self.viewsFont
 
         let stack = UIStackView(arrangedSubviews: [
             poster, titleLabel, viewsLabel
         ])
         stack.axis = .vertical
-        stack.spacing = 4
-        stack.setCustomSpacing(6, after: poster)
+        stack.spacing = Self.labelGap
+        stack.setCustomSpacing(Self.posterGap, after: poster)
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
         NSLayoutConstraint.activate([

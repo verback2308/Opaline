@@ -12,6 +12,14 @@
       "subtitle": "YouTube client for iOS 12+",
       "versions": [
         {
+          "version": "1.8.1",
+          "date": "2026-08-12T00:34:48Z",
+          "localizedDescription": "## Improvements\n\n- **Shorts in Subscriptions got their own shelf**, with an \"All\" button that pulls every short your channels have posted, straight from the channel feeds. Two new switches in Settings → Shorts: which player they open in, and whether they group into the shelf or stay inline as ordinary videos (#34)\n- **Channel filter in Subscriptions now includes that channel's Shorts**, not just its long-form videos (#34)\n- **The sign-in screen has a \"Copy code\" button.** The code was already hitting your clipboard when you tapped \"Open google.com/device\", but nothing told you that, and it was useless if you were typing the code on a laptop (#35)\n- **The sign-in screen is translated** — it had been hardcoded English since the first version. It also passes your language to the Google page it opens, which otherwise picks one by IP (#35)\n\n## Fixes\n\n- **Sign-in survives an expired code.** Codes time out while you're typing them, and the screen would sit there with an untranslated error and no way forward except relaunching the app. It pulls a fresh code on its own now, with a \"Try again\" button as a fallback (#35)\n- **Videos no longer jump back to the start.** When the app re-resolved a stream (expired URL, mid-playback error), it read the position off the freshly created player, which is always zero. Most noticeable in the first minutes of a video, where recoveries are frequent\n- **Cards in Shelf Rails size to the screen.** They were fixed at 280 points, so on an iPad the next card sat almost entirely off the edge\n- **The app icon updates after the rename.** iOS was still serving the cached YTLite one",
+          "downloadURL": "https://github.com/verback2308/Opaline/releases/download/1.8.1/Opaline_1.8.1.ipa",
+          "size": 6129571,
+          "minOSVersion": "12.0"
+        },
+        {
           "version": "1.8.0",
           "date": "2026-08-08T09:17:36Z",
           "localizedDescription": "## New Features\n\n- **Shorts** have their own tab and their own player now, instead of opening as regular videos. Swipe up and down, like, read the comments, share. The next one is loaded before you get to it, so it starts on video and not on a still frame. Tap a short in subscriptions, on a channel or in search and you swipe through that list first, then the app keeps going with recommendations. Don't want it? Settings → Shorts, turn it off and the tab is gone without a restart\n- **Pick the screen the app opens on.** Settings → Appearance → Default Screen\n- **Settings are grouped into sections** instead of one long scroll\n- **Four app icons** — Light, Dark, Clear Light and Clear Dark — or leave it on Auto to follow the system theme (#31). Settings → Appearance\n- **When a video ends** you get replay, previous and next. Cancel the autoplay countdown and you get replay too, instead of a dead screen (#26)\n- **A support link** in Settings, for anyone who wants to chip in\n\n## Improvements\n\n- **Scrolling doesn't stutter after loading more videos.** Every thumbnail was being decoded on all cores at once and left nothing for the interface. On an iPad mini 2 this was the worst of it\n- **Thumbnails show up much sooner.** They used to be asked for all at once, fight over the connection and then land together a few seconds later. Now they come in as you read the page\n- **The next page doesn't wait for avatars.** Channel info is fetched a few at a time instead of a hundred at once, and it's kept for a month now, not a day\n- **Subscriptions and Library open without a spinner** — they load in the background once the home feed is done\n- **Videos resume where you actually left off.** The position is saved on the device, so reopening a video you just watched no longer drops you where YouTube last knew you were\n- **The two 10-second buttons are previous and next** now\n- **Hide Status Bar in Fullscreen** moved from Appearance to Playback, where it belongs\n\n## Fixes\n\n- **Zoom to Fill** blew the picture up way past the point where it fills the screen\n- **A video watched to the end** no longer reopens at the very end",
@@ -132,14 +140,14 @@
           "minOSVersion": "12.0"
         }
       ],
-      "version": "1.8.0",
-      "versionDate": "2026-08-08T09:17:36Z",
-      "versionDescription": "## New Features\n\n- **Shorts** have their own tab and their own player now, instead of opening as regular videos. Swipe up and down, like, read the comments, share. The next one is loaded before you get to it, so it starts on video and not on a still frame. Tap a short in subscriptions, on a channel or in search and you swipe through that list first, then the app keeps going with recommendations. Don't want it? Settings → Shorts, turn it off and the tab is gone without a restart\n- **Pick the screen the app opens on.** Settings → Appearance → Default Screen\n- **Settings are grouped into sections** instead of one long scroll\n- **Four app icons** — Light, Dark, Clear Light and Clear Dark — or leave it on Auto to follow the system theme (#31). Settings → Appearance\n- **When a video ends** you get replay, previous and next. Cancel the autoplay countdown and you get replay too, instead of a dead screen (#26)\n- **A support link** in Settings, for anyone who wants to chip in\n\n## Improvements\n\n- **Scrolling doesn't stutter after loading more videos.** Every thumbnail was being decoded on all cores at once and left nothing for the interface. On an iPad mini 2 this was the worst of it\n- **Thumbnails show up much sooner.** They used to be asked for all at once, fight over the connection and then land together a few seconds later. Now they come in as you read the page\n- **The next page doesn't wait for avatars.** Channel info is fetched a few at a time instead of a hundred at once, and it's kept for a month now, not a day\n- **Subscriptions and Library open without a spinner** — they load in the background once the home feed is done\n- **Videos resume where you actually left off.** The position is saved on the device, so reopening a video you just watched no longer drops you where YouTube last knew you were\n- **The two 10-second buttons are previous and next** now\n- **Hide Status Bar in Fullscreen** moved from Appearance to Playback, where it belongs\n\n## Fixes\n\n- **Zoom to Fill** blew the picture up way past the point where it fills the screen\n- **A video watched to the end** no longer reopens at the very end",
-      "downloadURL": "https://github.com/verback2308/Opaline/releases/download/1.8.0/Opaline_1.8.0.ipa",
+      "version": "1.8.1",
+      "versionDate": "2026-08-12T00:34:48Z",
+      "versionDescription": "## Improvements\n\n- **Shorts in Subscriptions got their own shelf**, with an \"All\" button that pulls every short your channels have posted, straight from the channel feeds. Two new switches in Settings → Shorts: which player they open in, and whether they group into the shelf or stay inline as ordinary videos (#34)\n- **Channel filter in Subscriptions now includes that channel's Shorts**, not just its long-form videos (#34)\n- **The sign-in screen has a \"Copy code\" button.** The code was already hitting your clipboard when you tapped \"Open google.com/device\", but nothing told you that, and it was useless if you were typing the code on a laptop (#35)\n- **The sign-in screen is translated** — it had been hardcoded English since the first version. It also passes your language to the Google page it opens, which otherwise picks one by IP (#35)\n\n## Fixes\n\n- **Sign-in survives an expired code.** Codes time out while you're typing them, and the screen would sit there with an untranslated error and no way forward except relaunching the app. It pulls a fresh code on its own now, with a \"Try again\" button as a fallback (#35)\n- **Videos no longer jump back to the start.** When the app re-resolved a stream (expired URL, mid-playback error), it read the position off the freshly created player, which is always zero. Most noticeable in the first minutes of a video, where recoveries are frequent\n- **Cards in Shelf Rails size to the screen.** They were fixed at 280 points, so on an iPad the next card sat almost entirely off the edge\n- **The app icon updates after the rename.** iOS was still serving the cached YTLite one",
+      "downloadURL": "https://github.com/verback2308/Opaline/releases/download/1.8.1/Opaline_1.8.1.ipa",
       "localizedDescription": "A lightweight YouTube client for iOS 12+. No ads, no tracking. Features: SponsorBlock, Return YouTube Dislike, 1080p playback, background audio, PiP, subtitles, and more.",
       "iconURL": "https://raw.githubusercontent.com/verback2308/YTLite/main/source/icon.png",
       "tintColor": "FF0000",
-      "size": 6092212,
+      "size": 6129571,
       "category": "entertainment",
       "minOSVersion": "12.0",
       "screenshots": [
@@ -162,6 +170,15 @@
   "iconURL": "https://raw.githubusercontent.com/verback2308/YTLite/main/source/icon.png",
   "tintColor": "FF0000",
   "news": [
+    {
+      "title": "Opaline 1.8.1 - Seek fix, Shorts in Subscriptions, sign-in fixes",
+      "identifier": "release-1.8.1",
+      "caption": "Shorts in Subscriptions got their own shelf, with an \"All\" button that pulls every short your channels have posted, s…",
+      "date": "2026-08-12T00:34:48Z",
+      "tintColor": "FF0000",
+      "appID": "com.verback.YTLite",
+      "url": "https://github.com/verback2308/Opaline/releases/tag/1.8.1"
+    },
     {
       "title": "Opaline 1.8.0 - Shorts, faster feeds on old devices, player and settings rework",
       "identifier": "release-1.8.0",

@@ -69,12 +69,11 @@ private extension SubscriptionsViewController {
             return
         }
         isLoadingNewContentRSS = true
-        let includeShorts = UserDefaults.standard.bool(
-            forKey: UserDefaultsKeys.Feed.showShorts
-        )
+        // A dot means the channel published a proper video, whatever the
+        // Shorts setting says — so always the long-form (`UULF`) feed.
         channelRSSService.fetchRecentUploads(
             channelIds: ids,
-            includeShorts: includeShorts
+            includeShorts: false
         ) { [weak self] uploads in
             guard let self else {
                 return
