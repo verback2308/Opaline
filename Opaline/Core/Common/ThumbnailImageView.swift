@@ -7,6 +7,7 @@ class ThumbnailImageView: UIImageView {
     private var fallbackImage: UIImage?
     private var isShowingFallback = false
     private var currentPixelSize = 0
+    private var hasFailed = false
 
     /// Zero derives the decode target from the displayed thumbnail width.
     /// Set an explicit value for small fixed assets such as avatars.
@@ -68,6 +69,7 @@ class ThumbnailImageView: UIImageView {
         loadToken = nil
         currentURL = url
         currentVideoId = videoId
+        hasFailed = false
         if let fallback {
             image = fallback
             isShowingFallback = true
@@ -104,6 +106,7 @@ class ThumbnailImageView: UIImageView {
 
     private func shouldStartLoading(target: Int) -> Bool {
         target > 0
+            && !hasFailed
             && (currentPixelSize != target
                 || (loadToken == nil && image == nil))
     }
@@ -120,6 +123,7 @@ class ThumbnailImageView: UIImageView {
         }
         loadToken = nil
         guard case .success(let loaded) = result else {
+            hasFailed = true
             return
         }
         image = loaded.image
@@ -134,6 +138,7 @@ class ThumbnailImageView: UIImageView {
         fallbackImage = nil
         isShowingFallback = false
         currentPixelSize = 0
+        hasFailed = false
         image = nil
     }
 

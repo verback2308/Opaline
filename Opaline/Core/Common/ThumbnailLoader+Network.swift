@@ -51,6 +51,15 @@ extension ThumbnailLoader {
         completion: ((Result<ThumbnailLoadResult, Error>) -> Void)?
     ) -> Bool {
         let url = request.candidates[index]
+        if isKnownMissing(url) {
+            loadCandidate(
+                request: request,
+                index: index + 1,
+                token: token,
+                completion: completion
+            )
+            return true
+        }
         let key = request.cacheKey(for: url)
         if completeMemoryHit(
             key: key,
@@ -173,6 +182,7 @@ extension ThumbnailLoader {
             return
         }
         let url = response.request.candidates[response.index]
+        rememberMissingIfNeeded(response.result, url: url)
         guard let result = try? response.result.get(),
               (200..<300).contains(result.status),
               let image = decode(
@@ -185,12 +195,7 @@ extension ThumbnailLoader {
                   index: response.index
               )
         else {
-            loadCandidate(
-                request: response.request,
-                index: response.index + 1,
-                token: response.token,
-                completion: response.completion
-            )
+            loadNextCandidate(after: response)
             return
         }
         completeNetworkSuccess(
@@ -198,6 +203,17 @@ extension ThumbnailLoader {
             result: result,
             image: image,
             url: url
+        )
+    }
+
+    private func loadNextCandidate(
+        after response: ThumbnailNetworkResponse
+    ) {
+        loadCandidate(
+            request: response.request,
+            index: response.index + 1,
+            token: response.token,
+            completion: response.completion
         )
     }
 
@@ -274,20 +290,6 @@ extension ThumbnailLoader {
             sourceURL: url,
             pixelWidth: image.cgImage?.width ?? 0,
             pixelHeight: image.cgImage?.height ?? 0
-        )
-    }
-
-    private func logSuccess(
-        url: URL,
-        image: UIImage,
-        startedAt: Date
-    ) {
-        let elapsed = Int(Date().timeIntervalSince(startedAt) * 1_000)
-        let width = image.cgImage?.width ?? 0
-        let height = image.cgImage?.height ?? 0
-        AppLog.img(
-            "loaded \(url.lastPathComponent) "
-                + "\(width)x\(height) \(elapsed)ms"
         )
     }
 }

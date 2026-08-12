@@ -23,6 +23,7 @@ final class ThumbnailLoader {
     )
     var prefetchTokens: [String: CancellationToken] = [:]
     let prefetchLock = NSLock()
+    var missingCandidates = Set<String>()
 
     var cachingEnabled: Bool {
         UserDefaults.standard.object(
@@ -107,6 +108,9 @@ final class ThumbnailLoader {
     func clearCache() {
         memoryCache.removeAll()
         diskCache.clear()
+        prefetchLock.lock()
+        missingCandidates.removeAll()
+        prefetchLock.unlock()
     }
 
     func invalidate(url: URL) {
@@ -115,9 +119,54 @@ final class ThumbnailLoader {
             maxPixelSize: ThumbnailSizing.defaultPixelSize
         )
         for candidate in request.candidates {
-            memoryCache.remove(url: request.cacheKey(for: candidate))
+            for pixelSize in 1...ThumbnailSizing.maximumPixelSize {
+                memoryCache.remove(
+                    url: "\(candidate.absoluteString)#\(pixelSize)"
+                )
+            }
             diskCache.remove(url: candidate.absoluteString)
+            prefetchLock.lock()
+            missingCandidates.remove(candidate.absoluteString)
+            prefetchLock.unlock()
         }
+    }
+
+    func isKnownMissing(_ url: URL) -> Bool {
+        prefetchLock.lock()
+        defer { prefetchLock.unlock() }
+        return missingCandidates.contains(url.absoluteString)
+    }
+
+    func rememberMissing(_ url: URL) {
+        prefetchLock.lock()
+        missingCandidates.insert(url.absoluteString)
+        prefetchLock.unlock()
+    }
+
+    func rememberMissingIfNeeded(
+        _ result: Result<HTTPResponse, Error>,
+        url: URL
+    ) {
+        guard let response = try? result.get(),
+              response.status == 404
+        else {
+            return
+        }
+        rememberMissing(url)
+    }
+
+    func logSuccess(
+        url: URL,
+        image: UIImage,
+        startedAt: Date
+    ) {
+        let elapsed = Int(Date().timeIntervalSince(startedAt) * 1_000)
+        let width = image.cgImage?.width ?? 0
+        let height = image.cgImage?.height ?? 0
+        AppLog.img(
+            "loaded \(url.lastPathComponent) "
+                + "\(width)x\(height) \(elapsed)ms"
+        )
     }
 
     func finishPrefetch(
