@@ -81,12 +81,8 @@ extension InnertubeClient {
         videoId: String,
         fallbackURL: String
     ) -> String {
-        let normalized = normalizeThumbnailURL(fallbackURL)
-        if !normalized.isEmpty {
-            return normalized
-        }
         guard !videoId.isEmpty else {
-            return normalized
+            return normalizeThumbnailURL(fallbackURL)
         }
         return AppURLs.YouTube.thumbnailURL(videoId: videoId)
     }
