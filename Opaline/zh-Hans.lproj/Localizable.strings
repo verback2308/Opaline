@@ -425,3 +425,35 @@
 "notifications.permissionBanner.enable" = "启用通知";
 /* Detail screen action opening the notification's link */
 "notifications.detail.openLink" = "打开";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "登录 YouTube";
+"auth.instruction" = "点按下方按钮，然后在打开的页面中粘贴验证码。";
+"auth.openDevicePage" = "打开 google.com/device";
+"auth.continueAnonymously" = "匿名继续";
+"auth.copyCode" = "复制验证码";
+"auth.codeCopied" = "已复制验证码";
+"auth.fetchingCode" = "正在获取验证码…";
+"auth.waiting" = "正在等待确认…";
+"auth.failed" = "登录失败";
+"auth.tryAgain" = "重试";
+"auth.offline" = "无网络连接";
+
+/* ===== Shorts settings, comments and shared actions ===== */
+
+"channel.tab.shorts" = "Shorts";
+"shorts.shelf.title" = "Shorts";
+"common.close" = "关闭";
+"common.delete" = "删除";
+"common.edit" = "修改";
+"player.menu.queue" = "队列";
+"player.comments.viewReplies" = "查看回复";
+"player.comments.hideReplies" = "隐藏回复";
+"player.comments.moreReplies" = "显示更多回复";
+"settings.row.shortsPlayer" = "打开 Shorts 的方式";
+"settings.shortsPlayer.vertical" = "竖屏播放器";
+"settings.shortsPlayer.regular" = "普通播放器";
+"settings.row.shortsGrouping" = "在订阅内容中分组";
+"settings.footer.shorts" = "分组会将订阅内容中每一页的 Shorts 收进单独的栏目。关闭后，Shorts 将像普通视频一样直接显示在列表中。";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

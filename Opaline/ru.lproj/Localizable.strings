@@ -173,6 +173,11 @@
 "settings.row.hideStatusBar" = "Скрывать статус-бар в полноэкранном режиме";
 "settings.row.zoomToFill" = "Заполнять экран в полноэкранном режиме";
 "settings.row.showShorts" = "Показывать Shorts";
+"settings.row.shortsPlayer" = "Открывать Shorts в";
+"settings.shortsPlayer.vertical" = "Вертикальном плеере";
+"settings.shortsPlayer.regular" = "Обычном плеере";
+"settings.row.shortsGrouping" = "Группировать в подписках";
+"settings.footer.shorts" = "При группировке Shorts каждой загруженной страницы ленты подписок собираются в отдельную полку. Выключите, чтобы видеть Shorts в ленте как обычные видео.";
 "settings.row.autoplay" = "Автовоспроизведение";
 /* %1$@ = localized "Mix" term (player.related.mix) */
 "settings.row.autoplayMix" = "Автовоспроизведение (%1$@)";
@@ -312,6 +317,12 @@
 "account.signOut" = "Выйти";
 "account.notSignedIn" = "Вход не выполнен";
 
+/* Copies the OAuth device code shown on the sign-in screen */
+"auth.copyCode" = "Скопировать код";
+/* Toast shown after the device code is copied */
+"auth.codeCopied" = "Код скопирован";
+
+
 "common.error" = "Ошибка";
 "channel.unavailable" = "Канал недоступен";
 
@@ -338,3 +349,22 @@
 "notifications.permissionBanner.message" = "Системные уведомления отключены, поэтому оповещения могут не поступить вне приложения.";
 "notifications.permissionBanner.enable" = "Включить уведомления";
 "notifications.detail.openLink" = "Открыть";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "Вход в YouTube";
+"auth.instruction" = "Нажмите кнопку ниже и вставьте код на открывшейся странице.";
+"auth.openDevicePage" = "Открыть google.com/device";
+"auth.continueAnonymously" = "Продолжить анонимно";
+"auth.fetchingCode" = "Получение кода…";
+"auth.waiting" = "Ожидание подтверждения…";
+"auth.failed" = "Не удалось войти";
+"auth.tryAgain" = "Повторить";
+"auth.offline" = "Нет подключения";
+
+/* ===== Shorts and shared actions ===== */
+
+"channel.tab.shorts" = "Shorts";
+"shorts.shelf.title" = "Shorts";
+"common.close" = "Закрыть";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

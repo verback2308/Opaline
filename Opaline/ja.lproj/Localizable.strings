@@ -425,3 +425,35 @@
 "notifications.permissionBanner.enable" = "通知を有効にする";
 /* Detail screen action opening the notification's link */
 "notifications.detail.openLink" = "開く";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "YouTube にログイン";
+"auth.instruction" = "下のボタンをタップして、開いたページにコードを貼り付けてください。";
+"auth.openDevicePage" = "google.com/device を開く";
+"auth.continueAnonymously" = "ログインせずに続行";
+"auth.copyCode" = "コードをコピー";
+"auth.codeCopied" = "コードをコピーしました";
+"auth.fetchingCode" = "コードを取得しています…";
+"auth.waiting" = "承認を待っています…";
+"auth.failed" = "ログインできませんでした";
+"auth.tryAgain" = "再試行";
+"auth.offline" = "接続されていません";
+
+/* ===== Shorts settings, comments and shared actions ===== */
+
+"channel.tab.shorts" = "ショート動画";
+"shorts.shelf.title" = "ショート動画";
+"common.close" = "閉じる";
+"common.delete" = "削除";
+"common.edit" = "編集";
+"player.menu.queue" = "キュー";
+"player.comments.viewReplies" = "返信を表示";
+"player.comments.hideReplies" = "返信を非表示";
+"player.comments.moreReplies" = "返信をさらに表示";
+"settings.row.shortsPlayer" = "ショート動画の再生方法";
+"settings.shortsPlayer.vertical" = "縦型プレーヤー";
+"settings.shortsPlayer.regular" = "通常のプレーヤー";
+"settings.row.shortsGrouping" = "登録チャンネルでまとめる";
+"settings.footer.shorts" = "まとめると、登録チャンネルフィードの各ページのショート動画が専用の棚にまとめられます。オフにすると、ショート動画が通常の動画と同じように表示されます。";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

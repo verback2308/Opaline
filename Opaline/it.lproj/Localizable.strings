@@ -421,3 +421,35 @@
 "notifications.permissionBanner.enable" = "Attiva notifiche";
 /* Detail screen action opening the notification's link */
 "notifications.detail.openLink" = "Apri";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "Accedi a YouTube";
+"auth.instruction" = "Tocca il pulsante qui sotto e incolla il codice nella pagina che si apre.";
+"auth.openDevicePage" = "Apri google.com/device";
+"auth.continueAnonymously" = "Continua in modo anonimo";
+"auth.copyCode" = "Copia codice";
+"auth.codeCopied" = "Codice copiato";
+"auth.fetchingCode" = "Recupero del codice…";
+"auth.waiting" = "In attesa di conferma…";
+"auth.failed" = "Accesso non riuscito";
+"auth.tryAgain" = "Riprova";
+"auth.offline" = "Nessuna connessione";
+
+/* ===== Shorts settings, comments and shared actions ===== */
+
+"channel.tab.shorts" = "Short";
+"shorts.shelf.title" = "Short";
+"common.close" = "Chiudi";
+"common.delete" = "Elimina";
+"common.edit" = "Modifica";
+"player.menu.queue" = "Coda";
+"player.comments.viewReplies" = "Mostra risposte";
+"player.comments.hideReplies" = "Nascondi risposte";
+"player.comments.moreReplies" = "Mostra altre risposte";
+"settings.row.shortsPlayer" = "Apri gli Short in";
+"settings.shortsPlayer.vertical" = "Player verticale";
+"settings.shortsPlayer.regular" = "Player normale";
+"settings.row.shortsGrouping" = "Raggruppa in Iscrizioni";
+"settings.footer.shorts" = "Il raggruppamento raccoglie ogni pagina del feed delle iscrizioni in uno scaffale Short dedicato. Disattivalo per vedere gli Short in linea come video normali.";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

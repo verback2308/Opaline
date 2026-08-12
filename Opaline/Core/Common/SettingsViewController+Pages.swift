@@ -106,7 +106,17 @@ extension SettingsViewController {
     }
 
     private var shortsSections: [Section] {
-        [Section(header: nil, footer: nil, rows: [.showShorts])]
+        var rows: [Row] = [.showShorts]
+        if UserDefaults.standard.bool(forKey: UserDefaultsKeys.Feed.showShorts) {
+            rows.append(contentsOf: [.shortsPlayer, .shortsGrouping])
+        }
+        return [
+            Section(
+                header: nil,
+                footer: "settings.footer.shorts".localized,
+                rows: rows
+            )
+        ]
     }
 
     private var sponsorBlockSections: [Section] {

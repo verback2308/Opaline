@@ -29,7 +29,9 @@ final class VideoRouter {
         from presenter: UIViewController,
         shorts: ShortsEntry = .pool([])
     ) {
-        if video.isShort, let makeShorts = shortsViewControllerFactory {
+        if video.isShort,
+           ShortsPlayerMode.selected == .vertical,
+           let makeShorts = shortsViewControllerFactory {
             // The outermost one: Library's segments sit in an embedded
             // navigation controller whose view stops below the status bar,
             // and a full-screen feed pushed there leaves that strip showing

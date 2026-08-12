@@ -9,7 +9,8 @@ final class SettingsViewController: UIViewController {
         case pageSponsorBlock, pageCache, pageDebug
         case theme, autoDarkStart, autoDarkEnd, appIcon
         case appLanguage, region
-        case quality, backgroundPlayback, pipEnabled, hideStatusBar, showShorts
+        case quality, backgroundPlayback, pipEnabled, hideStatusBar
+        case showShorts, shortsPlayer, shortsGrouping
         case autoZoomToFill
         case autoplayEnabled, autoplayMixEnabled
         case autoDubEnabled, autoDubLanguage, autoDubIgnoreAI
@@ -251,6 +252,18 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             }
         case .showShorts:
             return makeShowShortsCell()
+        case .shortsPlayer:
+            return makeDisclosureCell(
+                "settings.row.shortsPlayer".localized,
+                value: ShortsPlayerMode.selected.displayName
+            )
+        case .shortsGrouping:
+            return makeToggleCell(
+                "settings.row.shortsGrouping".localized,
+                isOn: ShortsGrouping.isEnabled
+            ) {
+                ShortsGrouping.isEnabled = $0
+            }
         case .autoplayEnabled:
             return makeToggleCell(
                 "settings.row.autoplay".localized,
@@ -387,6 +400,8 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         switch row {
         case .quality:
             showQualityPicker()
+        case .shortsPlayer:
+            showShortsPlayerPicker()
         case .feedCacheDays:
             showFeedCacheDaysPicker()
         case .imageCacheDays:
@@ -436,7 +451,31 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 name: .showShortsSettingDidChange,
                 object: nil
             )
+            self.reloadSection(containing: .showShorts)
         }
+    }
+
+    private func showShortsPlayerPicker() {
+        let sheet = UIAlertController(
+            title: "settings.row.shortsPlayer".localized,
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+        for mode in ShortsPlayerMode.allCases {
+            let action = UIAlertAction(
+                title: mode.displayName, style: .default
+            ) { _ in
+                ShortsPlayerMode.selected = mode
+                self.reloadAllSettings()
+            }
+            if mode == ShortsPlayerMode.selected {
+                action.setValue(true, forKey: "checked")
+            }
+            sheet.addAction(action)
+        }
+        sheet.addAction(UIAlertAction(title: "common.cancel".localized, style: .cancel))
+        configureCenteredPopover(sheet)
+        present(sheet, animated: true)
     }
 
     func makeToggleCell(

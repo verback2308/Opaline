@@ -46,9 +46,10 @@ extension VideosViewController: UICollectionViewDelegateFlowLayout {
             return flow?.itemSize ?? .zero
         }
         // Full width minus the section's horizontal insets.
+        let width = collectionView.bounds.width - 16
         return CGSize(
-            width: collectionView.bounds.width - 16,
-            height: ShelfRailCell.railHeight
+            width: width,
+            height: ShelfRailCell.railHeight(forWidth: width)
         )
     }
 

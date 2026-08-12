@@ -6,7 +6,12 @@ enum ToastView {
     /// A toast always confirms (or fails) an action that just finished, so
     /// the matching notification haptic belongs here rather than at every
     /// call site.
-    static func show(_ text: String, in view: UIView, isError: Bool = false) {
+    static func show(
+        _ text: String,
+        in view: UIView,
+        isError: Bool = false,
+        bottomInset: CGFloat = 32
+    ) {
         if isError {
             Feedback.failure()
         } else {
@@ -14,7 +19,7 @@ enum ToastView {
         }
         let label = makeLabel(text)
         view.addSubview(label)
-        pin(label, to: view)
+        pin(label, to: view, bottomInset: bottomInset)
         UIView.animate(withDuration: 0.2) {
             label.alpha = 1
         }
@@ -27,14 +32,18 @@ enum ToastView {
         )
     }
 
-    private static func pin(_ label: UILabel, to view: UIView) {
+    private static func pin(
+        _ label: UILabel,
+        to view: UIView,
+        bottomInset: CGFloat
+    ) {
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(
                 equalTo: view.centerXAnchor
             ),
             label.bottomAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.bottomAnchor,
-                constant: -32
+                constant: -bottomInset
             ),
             label.leadingAnchor.constraint(
                 greaterThanOrEqualTo: view.leadingAnchor,

@@ -425,3 +425,35 @@
 "notifications.permissionBanner.enable" = "Bildirimleri Etkinleştir";
 /* Detail screen action opening the notification's link */
 "notifications.detail.openLink" = "Aç";
+
+/* ===== Sign-in (OAuth device code) screen ===== */
+
+"auth.title" = "YouTube'da oturum aç";
+"auth.instruction" = "Aşağıdaki düğmeye dokunun ve kodu açılan sayfaya yapıştırın.";
+"auth.openDevicePage" = "google.com/device adresini aç";
+"auth.continueAnonymously" = "Anonim olarak devam et";
+"auth.copyCode" = "Kodu kopyala";
+"auth.codeCopied" = "Kod kopyalandı";
+"auth.fetchingCode" = "Kod alınıyor…";
+"auth.waiting" = "Onay bekleniyor…";
+"auth.failed" = "Oturum açılamadı";
+"auth.tryAgain" = "Tekrar dene";
+"auth.offline" = "Bağlantı yok";
+
+/* ===== Shorts settings, comments and shared actions ===== */
+
+"channel.tab.shorts" = "Shorts";
+"shorts.shelf.title" = "Shorts";
+"common.close" = "Kapat";
+"common.delete" = "Sil";
+"common.edit" = "Düzenle";
+"player.menu.queue" = "Sıra";
+"player.comments.viewReplies" = "Yanıtları göster";
+"player.comments.hideReplies" = "Yanıtları gizle";
+"player.comments.moreReplies" = "Daha fazla yanıt göster";
+"settings.row.shortsPlayer" = "Shorts videolarını şurada aç:";
+"settings.shortsPlayer.vertical" = "Dikey oynatıcı";
+"settings.shortsPlayer.regular" = "Normal oynatıcı";
+"settings.row.shortsGrouping" = "Aboneliklerde grupla";
+"settings.footer.shorts" = "Gruplama, abonelik akışının her sayfasındaki Shorts videolarını kendi rafında toplar. Shorts videolarını normal videolar gibi akış içinde görmek için kapatın.";
+"settings.row.mainThreadWatchdog" = "Main Thread Watchdog";

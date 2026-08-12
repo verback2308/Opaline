@@ -142,6 +142,9 @@ extension WatchViewController {
     ) {
         sponsorBlock.attach(to: playerView)
         playerView.onTimeUpdate = { [weak self] time in
+            if self?.pendingRecoverySeek == false {
+                self?.lastPlaybackPosition = time
+            }
             self?.sponsorBlock.checkTime(time)
             NowPlayingService.shared.updatePosition(time)
             self?.videoPlayerView?.updateSubtitle(at: time)

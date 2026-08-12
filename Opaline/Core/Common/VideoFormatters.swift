@@ -14,6 +14,11 @@ enum VideoFormatters {
         guard let date = iso8601Formatter.date(from: iso) else {
             return iso
         }
+        return formatRelativeDate(date)
+    }
+
+    /// Same, for callers that already hold the date (RSS entries).
+    static func formatRelativeDate(_ date: Date) -> String {
         let seconds = -date.timeIntervalSinceNow
         if seconds < 3_600 {
             return "\(max(1, Int(seconds / 60)))m ago"

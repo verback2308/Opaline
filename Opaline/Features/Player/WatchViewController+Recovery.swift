@@ -6,15 +6,12 @@ import UIKit
 extension WatchViewController {
     func recoverPlayback() {
         guard !isRecoveringPlayback,
-              let player = videoPlayerView?.player
+              videoPlayerView?.player != nil
         else {
             return
         }
-        let position = player.currentTime().seconds
-        let wasPlaying = player.rate > 0
         AppLog.player(
-            "recoverPlayback: pos=\(position)s"
-                + " wasPlaying=\(wasPlaying)"
+            "recoverPlayback: resumeAt=\(lastPlaybackPosition)s"
         )
         let token = CancellationToken()
         pageLoadToken = token
@@ -24,21 +21,20 @@ extension WatchViewController {
         }
         isRecoveringPlayback = true
         hasSeenPlaybackError = false
-        recoveryTargetSeconds = position
+        pendingRecoverySeek = true
     }
 
     func applyRecoverySeekIfNeeded(
         _ item: AVPlayerItem
     ) -> Bool {
-        guard let target = recoveryTargetSeconds else {
+        guard pendingRecoverySeek else {
             return false
         }
-        recoveryTargetSeconds = nil
         isRecoveringPlayback = false
-        let duration = CMTimeGetSeconds(item.duration)
+        let target = lastPlaybackPosition
         AppLog.player(
             "recoverPlayback: ready"
-                + " duration=\(duration)s"
+                + " duration=\(CMTimeGetSeconds(item.duration))s"
                 + " seekTo=\(target)s"
         )
         let time = CMTime(
@@ -49,7 +45,13 @@ extension WatchViewController {
             to: time,
             toleranceBefore: .zero,
             toleranceAfter: .zero
-        ) { [weak self] _ in
+        ) { [weak self] finished in
+            // An unfinished seek means another item took over mid-flight —
+            // keep the gate closed so the next recovery still knows where
+            // the user was.
+            if finished {
+                self?.pendingRecoverySeek = false
+            }
             self?.videoPlayerView?.player?.play()
         }
         return true
