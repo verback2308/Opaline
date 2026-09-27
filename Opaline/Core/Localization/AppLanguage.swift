@@ -15,6 +15,7 @@ enum AppLanguage: String, CaseIterable {
     case italian = "it"
     case japanese = "ja"
     case portuguese = "pt"
+    case polish = "pl"
     case turkish = "tr"
     case vietnamese = "vi"
     case chineseSimplified = "zh-Hans"
@@ -83,6 +84,8 @@ extension AppLanguage {
             "日本語"
         case .portuguese:
             "Português"
+        case .polish:
+            "Polski"
         case .turkish:
             "Türkçe"
         case .vietnamese:

@@ -182,8 +182,8 @@ The interface follows your system language by default and can be overridden in *
 |---|---|---|---|
 | `en` English | `ru` Русский | `uk` Українська | `de` Deutsch |
 | `es` Español | `fr` Français | `it` Italiano | `ja` 日本語 |
-| `pt` Português | `tr` Türkçe | `vi` Tiếng Việt | `zh-Hans` 简体中文 |
-| `zh-Hant` 繁體中文 | | | |
+| `pl` Polish  | `pt` Português | `tr` Türkçe | `vi` Tiếng Việt |
+| `zh-Hans` 简体中文 | `zh-Hant` 繁體中文 | | |
 
 </details>
 

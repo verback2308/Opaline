@@ -198,6 +198,7 @@
 				fr,
 				ja,
 				pt,
+				pl,
 				tr,
 				"zh-Hans",
 				it,
