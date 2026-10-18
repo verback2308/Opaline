@@ -10,7 +10,7 @@ struct SABRPolicy {
 
 /// Reads one response and keeps the one segment it was asked for.
 ///
-/// The first media header for the requested format claims the response: its
+/// The media header for the requested format and sequence claims the response: its
 /// `MEDIA` parts are collected and everything else the server sends — the
 /// other track, the segments after this one — is dropped on the floor. That is
 /// how googlevideo's player adapter does it, and it is what makes a request
@@ -120,8 +120,10 @@ final class SABRSegmentCollector {
         }
     }
 
-    /// Records a header, and claims the response for the first one that is the
-    /// format this request is about.
+    /// A response can begin with the preceding segment when the requested
+    /// millisecond position rounds below a segment boundary. Keep reading until
+    /// the requested sequence arrives; serving the earlier bytes at the new HLS
+    /// URL repeats timestamps and freezes video while audio continues.
     private func noteHeader(_ payload: Data) {
         let fields = Protobuf.parse(payload)
         guard let header = MediaHeader(payload) else {
@@ -138,9 +140,14 @@ final class SABRSegmentCollector {
               Self.sameTrack(header.xtags, request.format.xtags) else {
             return
         }
+        guard request.isInit || header.sequence == request.sequence else {
+            AppLog.hls("sabr \(label): skipping sequence \(header.sequence) at \(header.startMs)ms")
+            return
+        }
         wantedHeaderId = id
         AppLog.hls(
-            "sabr \(label) served itag \(header.itag) xtags \(header.xtags ?? "-")"
+            "sabr \(label) served sequence \(header.sequence) at \(header.startMs)ms"
+                + " itag \(header.itag) xtags \(header.xtags ?? "-")"
         )
         // An init segment is not a position in the stream, so it must not be
         // acknowledged as one: a buffered range starting at 0 alongside a
