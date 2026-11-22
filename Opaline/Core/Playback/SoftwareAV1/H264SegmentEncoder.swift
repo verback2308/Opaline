@@ -143,9 +143,15 @@ final class H264SegmentEncoder {
             frameProperties: options,
             infoFlagsOut: nil
         ) { [weak self] status, _, sample in
-            guard status == noErr, let sample else {
-                AppLog.hls("av1: encoder dropped a frame (\(status))")
+            guard status == noErr else {
+                AppLog.hls("av1: encoder failed a frame (\(status))")
                 self?.noteDropped(status)
+                return
+            }
+            // A frame rate control chose to drop: the one before it simply
+            // shows a frame longer, and a dropped key frame is caught by the
+            // chunk's own check.
+            guard let sample else {
                 return
             }
             self?.collect(sample, sourceTime: sourceTime)
@@ -169,8 +175,8 @@ final class H264SegmentEncoder {
         return damaged ? [] : output
     }
 
-    /// Any frame lost spoils its chunk; a session that is gone or broken is
-    /// also replaced.
+    /// A frame lost to an error spoils its chunk; a session that is gone or
+    /// broken is also replaced.
     private func noteDropped(_ status: OSStatus) {
         lock.lock()
         damaged = true
