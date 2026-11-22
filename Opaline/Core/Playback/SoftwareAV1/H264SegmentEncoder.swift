@@ -10,7 +10,7 @@ struct EncodedSample {
 }
 
 /// The SPS and PPS the `avcC` of the init segment carries.
-struct H264ParameterSets {
+struct H264ParameterSets: Equatable {
     let sps: Data
     let pps: Data
 }
@@ -32,6 +32,10 @@ final class H264SegmentEncoder {
     /// background — at the next segment start, the next key frame.
     private var session: VTCompressionSession
     private var sessionLost = false
+    /// Frames since the last `finishSegment` went missing to a lost session,
+    /// or a replacement session's SPS/PPS differ from the init segment's.
+    private var damaged = false
+    private var verifyParameterSets = false
     private let lock = NSLock()
     private var output: [EncodedSample] = []
     /// What VideoToolbox is told each frame's time is. It insists on
@@ -150,28 +154,31 @@ final class H264SegmentEncoder {
     }
 
     /// Waits for every submitted frame and hands them back, in submission
-    /// order — frames are never reordered.
+    /// order — frames are never reordered. Nothing, when some were lost: a
+    /// chunk short of frames would freeze playback where they are missing.
     func finishSegment() -> [EncodedSample] {
         VTCompressionSessionCompleteFrames(session, untilPresentationTimeStamp: .invalid)
         lock.lock()
         defer {
             output = []
+            damaged = false
             lock.unlock()
         }
-        return output
+        return damaged ? [] : output
     }
 
     private func noteFailure(_ status: OSStatus) {
-        guard status == kVTInvalidSessionErr else {
+        guard status == kVTInvalidSessionErr || status == kVTVideoEncoderMalfunctionErr else {
             return
         }
         lock.lock()
         sessionLost = true
+        damaged = true
         lock.unlock()
     }
 
-    /// The same settings give the same SPS and PPS, so the init segment
-    /// already handed out stays valid.
+    /// The same settings should give the same SPS and PPS, keeping the init
+    /// segment already handed out valid; `collect` checks that they do.
     private func replaceLostSession() {
         lock.lock()
         let lost = sessionLost
@@ -183,6 +190,9 @@ final class H264SegmentEncoder {
         AppLog.hls("av1: encoder session was invalidated; starting a new one")
         VTCompressionSessionInvalidate(session)
         session = fresh
+        lock.lock()
+        verifyParameterSets = true
+        lock.unlock()
     }
 
     private func collect(_ sample: CMSampleBuffer, sourceTime: Int64) {
@@ -199,8 +209,16 @@ final class H264SegmentEncoder {
         let encoded = EncodedSample(data: data, timestamp: sourceTime, isSync: Self.isSync(sample))
         lock.lock()
         output.append(encoded)
-        if parameterSets == nil {
-            parameterSets = CMSampleBufferGetFormatDescription(sample).flatMap(Self.parameterSets)
+        if parameterSets == nil || verifyParameterSets {
+            let sets = CMSampleBufferGetFormatDescription(sample).flatMap(Self.parameterSets)
+            if parameterSets == nil {
+                parameterSets = sets
+            } else if sets != parameterSets {
+                AppLog.hls("av1: new encoder session changed SPS/PPS; dropping its output")
+                damaged = true
+            } else {
+                verifyParameterSets = false
+            }
         }
         lock.unlock()
     }
