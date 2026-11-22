@@ -64,7 +64,7 @@ extension LocalMediaServer {
     /// Binding can still fail for a moment after the cancel: try a few times.
     func listen(again attempt: Int, generation: Int) {
         guard generation == rebinds, let port, let value = NWEndpoint.Port(rawValue: port),
-              let fresh = Self.makeListener(port: value), adopt(fresh) else {
+              let fresh = Self.makeListener(port: value) else {
             return
         }
         fresh.stateUpdateHandler = { [weak self] state in
@@ -87,6 +87,10 @@ extension LocalMediaServer {
         fresh.newConnectionHandler = { [weak self] connection in
             self?.accept(connection)
         }
-        fresh.start(queue: queue)
+        // Started under stop()'s lock: a stop cannot slip in between and
+        // leave a cancelled listener to be started after all.
+        if !adopt(fresh, start: { fresh.start(queue: queue) }) {
+            fresh.stateUpdateHandler = nil
+        }
     }
 }

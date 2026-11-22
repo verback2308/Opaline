@@ -159,13 +159,14 @@ final class LocalMediaServer {
 
     /// Swaps in a rebound listener — under the lock `stop()` reads it with,
     /// since `stop()` runs off the server queue. False once stopped.
-    func adopt(_ fresh: NWListener) -> Bool {
+    func adopt(_ fresh: NWListener, start: () -> Void) -> Bool {
         connectionsLock.lock()
         defer { connectionsLock.unlock() }
         guard !stopped else {
             return false
         }
         listener = fresh
+        start()
         return true
     }
 
