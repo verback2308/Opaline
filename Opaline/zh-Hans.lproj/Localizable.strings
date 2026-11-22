@@ -232,6 +232,7 @@
 "settings.row.pip" = "画中画";
 "settings.row.hideStatusBar" = "全屏时隐藏状态栏";
 "settings.row.zoomToFill" = "全屏时缩放以填充";
+"settings.row.openInFullscreen" = "以全屏打开视频";
 "settings.row.showShorts" = "显示 Shorts";
 "settings.row.autoplay" = "自动播放";
 /* %1$@ = localized "Mix" term (player.related.mix) */

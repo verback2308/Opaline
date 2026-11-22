@@ -228,6 +228,7 @@
 "settings.row.pip" = "Imagen en imagen";
 "settings.row.hideStatusBar" = "Ocultar barra de estado en pantalla completa";
 "settings.row.zoomToFill" = "Ampliar para rellenar en pantalla completa";
+"settings.row.openInFullscreen" = "Abrir videos en pantalla completa";
 "settings.row.showShorts" = "Mostrar Shorts";
 "settings.row.autoplay" = "Reproducción automática";
 /* %1$@ = localized "Mix" term (player.related.mix) */

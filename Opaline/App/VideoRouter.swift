@@ -53,6 +53,7 @@ final class VideoRouter {
             return
         }
         if let panel {
+            panel.watchVC.requestAutoFullscreenIfEnabled()
             panel.watchVC.loadVideo(video)
             panel.expand(animated: true)
             return
@@ -62,6 +63,7 @@ final class VideoRouter {
             return
         }
         let watchVC = factory(video)
+        watchVC.requestAutoFullscreenIfEnabled()
         let newPanel = PlayerPanelViewController(watchVC: watchVC)
         newPanel.onClose = { [weak self] in
             self?.panel = nil

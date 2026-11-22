@@ -232,6 +232,7 @@
 "settings.row.pip" = "子母畫面";
 "settings.row.hideStatusBar" = "全螢幕時隱藏狀態列";
 "settings.row.zoomToFill" = "全螢幕時縮放以填充";
+"settings.row.openInFullscreen" = "以全螢幕開啟影片";
 "settings.row.showShorts" = "顯示 Shorts";
 "settings.row.autoplay" = "自動播放";
 /* %1$@ = localized "Mix" term (player.related.mix) */

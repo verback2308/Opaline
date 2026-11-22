@@ -13,7 +13,7 @@ final class SettingsViewController: UIViewController {
         case backgroundPlayback, pipEnabled, hideStatusBar
         case downloadQuality, downloadComments, downloadCaptions
         case showShorts, shortsPlayer, shortsGrouping
-        case autoZoomToFill
+        case autoZoomToFill, openInFullscreen
         case autoplayEnabled, autoplayMixEnabled
         case autoDubEnabled, autoDubLanguage, autoDubIgnoreAI
         case homeLayout, defaultTab
@@ -266,6 +266,15 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 "settings.row.zoomToFill".localized, isOn: isOn
             ) {
                 UserDefaults.standard.set($0, forKey: key)
+            }
+        case .openInFullscreen:
+            return makeToggleCell(
+                "settings.row.openInFullscreen".localized,
+                isOn: WatchViewController.opensVideosInFullscreen
+            ) {
+                UserDefaults.standard.set(
+                    $0, forKey: UserDefaultsKeys.Player.openInFullscreen
+                )
             }
         case .showShorts:
             return makeShowShortsCell()

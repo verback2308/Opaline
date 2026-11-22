@@ -111,3 +111,38 @@ extension WatchViewController {
         updateQueueBar()
     }
 }
+
+// MARK: - Open in fullscreen (iPad)
+
+extension WatchViewController {
+    static var opensVideosInFullscreen: Bool {
+        UserDefaults.standard.bool(
+            forKey: UserDefaultsKeys.Player.openInFullscreen
+        )
+    }
+
+    /// Called when the user opens a video — from a feed, a link, the related
+    /// list or the queue; the next player attach consumes
+    /// it. Autoplay and queue advances load videos without it, so they never
+    /// force fullscreen. iPhone is left alone: there the orientation, not a
+    /// setting, decides fullscreen.
+    func requestAutoFullscreenIfEnabled() {
+        wantsAutoFullscreen = UIDevice.current.userInterfaceIdiom == .pad
+            && Self.opensVideosInFullscreen
+    }
+
+    /// Runs once a player is attached — the first moment there is a player
+    /// view to move into the window.
+    func enterAutoFullscreenIfRequested() {
+        guard wantsAutoFullscreen,
+              let playerView = videoPlayerView,
+              view.window != nil else {
+            return
+        }
+        wantsAutoFullscreen = false
+        guard !playerView.isFullscreen else {
+            return
+        }
+        enterFullscreen(playerView: playerView)
+    }
+}

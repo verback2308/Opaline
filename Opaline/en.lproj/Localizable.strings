@@ -330,6 +330,7 @@
 "settings.row.pip" = "Picture-in-Picture";
 "settings.row.hideStatusBar" = "Hide Status Bar in Fullscreen";
 "settings.row.zoomToFill" = "Zoom to Fill in Fullscreen";
+"settings.row.openInFullscreen" = "Open Videos in Fullscreen";
 "settings.row.showShorts" = "Show Shorts";
 "settings.row.shortsPlayer" = "Open Shorts in";
 "settings.shortsPlayer.vertical" = "Vertical player";

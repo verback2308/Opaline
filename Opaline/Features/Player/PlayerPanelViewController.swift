@@ -89,6 +89,9 @@ final class PlayerPanelViewController: UIViewController, UIGestureRecognizerDele
 
     func collapse(animated: Bool) {
         isExpanded = false
+        // Minimized before the player arrived: it should not jump out of the
+        // mini bar into fullscreen.
+        watchVC.wantsAutoFullscreen = false
         refreshSupportedOrientations()
         refreshMiniBar()
         miniBar?.transform = .identity

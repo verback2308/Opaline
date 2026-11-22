@@ -130,6 +130,16 @@ extension SettingsViewController {
         if AutoDubPreference.isEnabled {
             autoDubRows.append(contentsOf: [.autoDubLanguage, .autoDubIgnoreAI])
         }
+        var playerRows: [Row] = [.backgroundPlayback, .pipEnabled]
+        // iPhone already turns landscape into fullscreen; on iPad the player
+        // opens next to the related list unless asked otherwise.
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            playerRows.append(.openInFullscreen)
+        }
+        playerRows.append(contentsOf: [
+            .autoZoomToFill, .hideStatusBar,
+            .autoplayEnabled, .autoplayMixEnabled
+        ])
         return [
             Section(
                 header: "settings.section.videoQuality".localized,
@@ -139,11 +149,7 @@ extension SettingsViewController {
             Section(
                 header: nil,
                 footer: "settings.footer.playback".localized,
-                rows: [
-                    .backgroundPlayback, .pipEnabled,
-                    .autoZoomToFill, .hideStatusBar,
-                    .autoplayEnabled, .autoplayMixEnabled
-                ]
+                rows: playerRows
             ),
             Section(
                 header: "settings.section.ryd".localized,

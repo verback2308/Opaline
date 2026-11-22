@@ -191,6 +191,7 @@
 "settings.row.pip" = "Hình trong hình";
 "settings.row.hideStatusBar" = "Ẩn thanh trạng thái khi toàn màn hình";
 "settings.row.zoomToFill" = "Thu phóng vừa màn hình khi toàn màn hình";
+"settings.row.openInFullscreen" = "Mở video ở chế độ toàn màn hình";
 "settings.row.showShorts" = "Hiện Shorts";
 "settings.row.shortsPlayer" = "Mở Shorts trong";
 "settings.shortsPlayer.vertical" = "Trình phát dọc";

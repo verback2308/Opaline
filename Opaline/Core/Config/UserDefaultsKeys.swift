@@ -95,6 +95,7 @@ enum UserDefaultsKeys {
         static let pipEnabled = "player_pipEnabled"
         static let hideStatusBarInFullscreen = "player_hideStatusBarFullscreen"
         static let autoZoomToFill = "player_autoZoomToFill"
+        static let openInFullscreen = "player_openInFullscreen"
     }
 
     enum Playback {

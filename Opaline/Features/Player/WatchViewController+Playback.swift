@@ -34,6 +34,7 @@ extension WatchViewController {
             attachToExistingPlayer(
                 player: saved, item: item
             )
+            enterAutoFullscreenIfRequested()
             return
         }
         resetPlaybackSurfaces()
@@ -53,6 +54,7 @@ extension WatchViewController {
         // Start as soon as the first frames are decodable instead of
         // waiting for the stall-minimizing buffer to fill.
         player.playImmediately(atRate: pv.playbackSpeed)
+        enterAutoFullscreenIfRequested()
     }
 
     private func attachToExistingPlayer(
