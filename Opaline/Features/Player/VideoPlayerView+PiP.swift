@@ -195,6 +195,11 @@ extension VideoPlayerView {
                 player.play()
             }
         }
+        // Back to a paused video — the lock pause, say: show the controls.
+        // A tick later, since the rate change may not have landed yet.
+        DispatchQueue.main.async { [weak self] in
+            self?.showControlsIfPaused()
+        }
         // Re-evaluate the PiP setting (it may have changed in Settings).
         setupPiP()
     }

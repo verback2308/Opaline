@@ -30,6 +30,8 @@ extension VideoPlayerView {
     /// can outlive as this view's `player` (rebuild, detach).
     func rateChanged(to rate: Float, of observed: AVPlayer) {
         if rate == 0, ScreenLockPause.shared.takePause(of: observed) {
+            // A quick unlock can make the app active before this lands.
+            showControlsIfPaused()
             return
         }
         if pauseIfPlayingInBackground(rate: rate) {
@@ -105,6 +107,17 @@ extension VideoPlayerView {
             return
         }
         multitaskPause.lastUserPause = CACurrentMediaTime()
+    }
+
+    /// On returning to a paused video the controls should be up: play is
+    /// then one tap away, and the picture is clearly not frozen.
+    func showControlsIfPaused() {
+        guard let player, player.rate == 0, !isPiPActive,
+              UIApplication.shared.applicationState == .active else {
+            return
+        }
+        hideWorkItem?.cancel()
+        setControls(visible: true, animated: true)
     }
 
     private func resumeAfterSystemPause() {
