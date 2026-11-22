@@ -30,7 +30,7 @@ final class ShortsPlayerView: UIView {
     override static var layerClass: AnyClass { AVPlayerLayer.self }
 
     let facade = PlaybackFacade()
-    let player = AVQueuePlayer() // internal for the 2x hold, see +SpeedBoost
+    let player = AVQueuePlayer() // internal for the 2x hold, see ShortsSpeedBoost
     /// Internal, not private: the PlaybackContext conformance writes it
     /// from ShortsPlayerView+Playback.swift.
     let statusLabel = UILabel()

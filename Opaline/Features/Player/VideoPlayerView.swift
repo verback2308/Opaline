@@ -245,7 +245,7 @@ final class VideoPlayerView: UIView {
     let seekBurst = SeekBurstState()
 
     /// Press-and-drag scrubbing started anywhere on the picture (#116).
-    let holdScrub = HoldScrubState(), speedBoostBadge = SpeedBoostBadge()
+    let holdScrub = HoldScrubState(), speedBoost = SpeedBoostHold()
 
     // MARK: - State
 

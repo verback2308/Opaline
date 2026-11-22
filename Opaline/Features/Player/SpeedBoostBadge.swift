@@ -6,6 +6,7 @@ final class SpeedBoostBadge: UIView {
     static let boostedRate: Float = 2
 
     private let label = UILabel()
+    private var wantsVisible = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -13,6 +14,7 @@ final class SpeedBoostBadge: UIView {
         layer.cornerRadius = 15
         isUserInteractionEnabled = false
         isHidden = true
+        alpha = 0
         translatesAutoresizingMaskIntoConstraints = false
         label.text = "2x \u{25B6}\u{FE0E}\u{25B6}\u{FE0E}"
         label.font = .boldSystemFont(ofSize: 13)
@@ -49,13 +51,17 @@ final class SpeedBoostBadge: UIView {
     }
 
     func setVisible(_ visible: Bool) {
-        guard visible == isHidden else {
+        guard visible != wantsVisible else {
             return
         }
-        isHidden = !visible
-        alpha = visible ? 0 : 1
-        UIView.animate(withDuration: 0.15) {
-            self.alpha = visible ? 1 : 0
+        wantsVisible = visible
+        if visible {
+            isHidden = false
+        }
+        let fade = { self.alpha = visible ? 1 : 0 }
+        // Hidden only once faded, and only if nothing showed it since.
+        UIView.animate(withDuration: 0.15, animations: fade) { _ in
+            self.isHidden = !self.wantsVisible
         }
     }
 }

@@ -7,8 +7,6 @@ final class HoldScrubState {
     /// far enough to mean a scrub yet.
     var isTracking = false
     var isActive = false
-    /// The press is holding playback at 2x (#149); a drag ends it.
-    var isBoosting = false
     var startX: CGFloat = 0
     var startProgress: Double = 0
 }
@@ -94,23 +92,15 @@ extension VideoPlayerView {
         guard holdScrub.isTracking, bounds.width > 0 else {
             return
         }
-        let travel = xPosition - holdScrub.startX
         if !holdScrub.isActive {
-            guard abs(travel) >= holdScrubThreshold else {
+            guard abs(xPosition - holdScrub.startX) >= holdScrubThreshold else {
                 return
             }
-            holdScrub.isActive = true
-            // A drag is a scrub, not a fast-forward: back to the chosen
-            // speed, and the bar and time label up as the readout.
-            stopSpeedBoost()
-            if !controlsVisible {
-                setControls(visible: true, animated: true)
-            }
-            seekBar.beginExternalScrub()
+            beginDragScrub(atX: xPosition)
         }
         seekBar.updateExternalScrub(
             to: holdScrub.startProgress
-                + Double(travel / bounds.width)
+                + Double((xPosition - holdScrub.startX) / bounds.width)
         )
     }
 
@@ -128,28 +118,34 @@ extension VideoPlayerView {
 // MARK: - Hold for 2x
 
 extension VideoPlayerView {
+    /// A drag is a scrub, not a fast-forward: back to the chosen speed, the
+    /// bar and time label up as the readout, and measured from where
+    /// playback is now — a 2x hold has moved it on since the press landed.
+    private func beginDragScrub(atX xPosition: CGFloat) {
+        holdScrub.isActive = true
+        stopSpeedBoost()
+        if let time = player?.currentTime(), duration > 0 {
+            holdScrub.startProgress = CMTimeGetSeconds(time) / duration
+        }
+        holdScrub.startX = xPosition
+        if !controlsVisible {
+            setControls(visible: true, animated: true)
+        }
+        seekBar.beginExternalScrub()
+    }
+
     /// Only a playing video speeds up: a press on a paused one is the start
     /// of a scrub, and starting playback from a hold would surprise.
     private func startSpeedBoost() {
-        guard let player, player.rate > 0 else {
+        guard let player else {
             return
         }
-        holdScrub.isBoosting = true
-        player.rate = max(playbackSpeed, SpeedBoostBadge.boostedRate)
-        speedBoostBadge.install(in: self)
-        speedBoostBadge.setVisible(true)
+        speedBoost.badge.install(in: self)
+        _ = speedBoost.begin(player, rate: max(playbackSpeed, SpeedBoostBadge.boostedRate))
     }
 
-    /// Back to the speed the user picked — unless playback stopped during
-    /// the hold (the end of the video, a call), which must stay stopped.
+    /// Back to the speed the user picked.
     private func stopSpeedBoost() {
-        guard holdScrub.isBoosting else {
-            return
-        }
-        holdScrub.isBoosting = false
-        speedBoostBadge.setVisible(false)
-        if let player, player.rate > 0 {
-            player.rate = playbackSpeed
-        }
+        speedBoost.end(player, restoring: playbackSpeed)
     }
 }
