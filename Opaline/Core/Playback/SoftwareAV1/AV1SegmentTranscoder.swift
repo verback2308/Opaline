@@ -155,7 +155,9 @@ final class AV1SegmentTranscoder {
             AppLog.hls("av1: chunk \(index).\(cutter.current) lost frames")
             return
         }
-        let lastDuration = encoded.last.map { cutter.duration(at: $0.timestamp) } ?? 0
+        let lastDuration = encoded.last.map {
+            cutter.duration(from: $0.timestamp, toEndOf: cutter.current)
+        } ?? 0
         let fragment = writer.mediaSegment(
             sequence: UInt32(index * 64 + cutter.current + 1),
             samples: encoded,
@@ -192,8 +194,13 @@ private struct ChunkCutter {
         boundaries.filter { $0 <= timestamp }.count
     }
 
-    func duration(at timestamp: Int64) -> UInt32 {
-        durations[timestamp] ?? 0
+    /// How long the last encoded frame lasts: up to the chunk's end, so a
+    /// frame the encoder dropped after it leaves no gap before the next.
+    func duration(from timestamp: Int64, toEndOf chunk: Int) -> UInt32 {
+        let end = chunk < boundaries.count ? boundaries[chunk] : Int64.max
+        return durations
+            .filter { $0.key >= timestamp && $0.key < end }
+            .reduce(0) { $0 + $1.value }
     }
 }
 
