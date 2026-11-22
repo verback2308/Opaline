@@ -11,6 +11,8 @@ extension SABRDelivery {
         let fetcher: SABRFetcher
         /// Where playback should pick up, for `EXT-X-START`.
         let startAt: Double?
+        /// Set when the video track is software AV1 (see AV1Support).
+        var transcode: AV1TranscodeSession?
     }
 
     /// The single writer for the routing state the loopback server reads.
@@ -40,7 +42,7 @@ extension SABRDelivery {
         let rest = Array(parts.dropFirst())
         let playlistType = "application/vnd.apple.mpegurl"
         if rest == ["master.m3u8"] {
-            completion(Data(mainPlaylist(route: route).utf8), playlistType)
+            serveMain(route: route, completion: completion)
             return
         }
         if rest.count == 1, rest[0].hasSuffix(".m3u8") {
@@ -51,6 +53,10 @@ extension SABRDelivery {
         guard rest.count == 3, rest[0] == "s",
               let track = route.tracks.first(where: { $0.path == rest[1] }) else {
             completion(nil, "")
+            return
+        }
+        if track.path == "video", let transcode = route.transcode {
+            serveTranscoded(rest[2], session: transcode, completion: completion)
             return
         }
         serveSegment(rest[2], of: track, route: route, completion: completion)
@@ -69,7 +75,7 @@ extension SABRDelivery {
     }
 
     /// Main playlist pointing at the two media playlists.
-    static func mainPlaylist(route: Route) -> String {
+    static func mainPlaylist(route: Route, videoCodecs: String? = nil) -> String {
         guard route.tracks.count == 2,
               let video = route.tracks.first,
               let audio = route.tracks.last else {
@@ -79,7 +85,7 @@ extension SABRDelivery {
         let videoPeak = HLSGenerator.peakBitrate(video.segments, fallback: video.format.bitrate)
         return HLSGenerator.mainPlaylist(
             bandwidth: videoPeak + audioPeak,
-            codecs: "\(video.format.codecs),\(audio.format.codecs)",
+            codecs: "\(videoCodecs ?? video.format.codecs),\(audio.format.codecs)",
             resolution: "\(video.format.width ?? 1_280)x\(video.format.height ?? 720)",
             uris: HLSGenerator.PlaylistURIs(
                 video: "/g\(route.generation)/\(video.path).m3u8",
@@ -112,7 +118,7 @@ extension SABRDelivery {
     /// Maps one playlist entry onto the segment the server knows: SABR counts
     /// segments from 1, and the time it is asked to stream from is where that
     /// segment starts.
-    private static func segmentRequest(
+    static func segmentRequest(
         _ name: String,
         of track: Track,
         route: Route
@@ -249,7 +255,7 @@ extension SABRDelivery {
             tracks: tracks,
             fetcher: fetcher,
             startAt: pendingStartAt
-        )
+        ).withTranscoding()
         pendingStartAt = nil
         let path = "g\(generation)/master.m3u8"
         withServer { base in

@@ -9,10 +9,18 @@ final class HLSPlaylistLoader: NSObject,
     )
 
     private var playlists: [String: Data] = [:]
+    /// Whatever else must live as long as the item does — the transcoding
+    /// server when the video track is software AV1.
+    var keepAlive: AnyObject?
 
     /// Register playlist content for a given path.
     func register(path: String, content: String) {
         playlists[path] = Data(content.utf8)
+    }
+
+    /// A playlist registered earlier, for serving it some other way.
+    func playlist(at path: String) -> Data? {
+        playlists[path]
     }
 
     func resourceLoader(

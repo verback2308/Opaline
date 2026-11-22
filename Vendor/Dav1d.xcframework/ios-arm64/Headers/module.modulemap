@@ -1,0 +1,5 @@
+module Dav1d {
+    umbrella header "dav1d/dav1d.h"
+    link "dav1d"
+    export *
+}

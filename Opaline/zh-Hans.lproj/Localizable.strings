@@ -232,6 +232,8 @@
 "settings.row.pip" = "画中画";
 "settings.row.hideStatusBar" = "全屏时隐藏状态栏";
 "settings.row.zoomToFill" = "全屏时缩放以填充";
+"settings.row.softwareAV1" = "通过软件 AV1 播放 1440p（测试版）";
+"settings.footer.softwareAV1" = "为不支持硬件 AV1 的设备添加 1440p：视频由 CPU 解码并重新编码为 H.264 供播放器使用。“自动”将在视频提供 1440p 时以 1440p 播放。耗电更多，设备会发热。";
 "settings.row.showShorts" = "显示 Shorts";
 "settings.row.autoplay" = "自动播放";
 /* %1$@ = localized "Mix" term (player.related.mix) */

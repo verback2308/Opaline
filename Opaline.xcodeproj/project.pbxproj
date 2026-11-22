@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D1D1D1D1D1D1000000000002 /* Dav1d.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1D1D1D1D1D1000000000001 /* Dav1d.xcframework */; };
 		49E0100B00000000000000EB /* OpalineOpenIn.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 49E0100100000000000000E1 /* OpalineOpenIn.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		49E0100F00000000000000EF /* YouTubeLinkParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E0100E00000000000000EE /* YouTubeLinkParser.swift */; };
 /* End PBXBuildFile section */
@@ -40,6 +41,7 @@
 		49E0100100000000000000E1 /* OpalineOpenIn.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpalineOpenIn.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		49E0100E00000000000000EE /* YouTubeLinkParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = YouTubeLinkParser.swift; path = Opaline/Core/Common/YouTubeLinkParser.swift; sourceTree = SOURCE_ROOT; };
 		A1B2C3D4E5F6000123456789 /* Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Local.xcconfig; path = Config/Local.xcconfig; sourceTree = SOURCE_ROOT; };
+		D1D1D1D1D1D1000000000001 /* Dav1d.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Vendor/Dav1d.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -83,6 +85,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1D1D1D1D1D1000000000002 /* Dav1d.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -104,6 +107,7 @@
 				49E0100E00000000000000EE /* YouTubeLinkParser.swift */,
 				4940A7202F6AD27900E6C599 /* Products */,
 				A1B2C3D4E5F6000123456789 /* Local.xcconfig */,
+				D1D1D1D1D1D1000000000001 /* Dav1d.xcframework */,
 			);
 			sourceTree = "<group>";
 		};

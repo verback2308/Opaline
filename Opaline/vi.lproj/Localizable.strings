@@ -191,6 +191,8 @@
 "settings.row.pip" = "Hình trong hình";
 "settings.row.hideStatusBar" = "Ẩn thanh trạng thái khi toàn màn hình";
 "settings.row.zoomToFill" = "Thu phóng vừa màn hình khi toàn màn hình";
+"settings.row.softwareAV1" = "1440p qua AV1 phần mềm (Beta)";
+"settings.footer.softwareAV1" = "Thêm 1440p trên thiết bị không có AV1 phần cứng: video được CPU giải mã và mã hoá lại sang H.264 cho trình phát. Chế độ Tự động sẽ phát 1440p khi video có. Tốn pin hơn và làm máy nóng.";
 "settings.row.showShorts" = "Hiện Shorts";
 "settings.row.shortsPlayer" = "Mở Shorts trong";
 "settings.shortsPlayer.vertical" = "Trình phát dọc";

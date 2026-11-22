@@ -233,6 +233,8 @@
 "settings.row.pip" = "Картинка в картинке";
 "settings.row.hideStatusBar" = "Скрывать статус-бар в полноэкранном режиме";
 "settings.row.zoomToFill" = "Заполнять экран в полноэкранном режиме";
+"settings.row.softwareAV1" = "1440p через программный AV1 (бета)";
+"settings.footer.softwareAV1" = "Добавляет 1440p на устройствах без аппаратного AV1: видео декодируется процессором и перекодируется в H.264 для плеера. В режиме «Авто» видео будут открываться в 1440p, если оно доступно. Расходует больше батареи и нагревает устройство.";
 "settings.row.showShorts" = "Показывать Shorts";
 "settings.row.shortsPlayer" = "Открывать Shorts в";
 "settings.shortsPlayer.vertical" = "Вертикальном плеере";

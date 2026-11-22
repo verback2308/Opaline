@@ -101,6 +101,8 @@ enum UserDefaultsKeys {
         /// The made-up television id the TV client presents once and keeps;
         /// its proof-of-origin token is bound to this exact string.
         static let livingRoomPoTokenId = "playback_livingRoomPoTokenId"
+        /// Beta: 1440p through software AV1 decode (see AV1Support).
+        static let softwareAV1 = "playback_softwareAV1"
     }
 
     enum AutoDub {

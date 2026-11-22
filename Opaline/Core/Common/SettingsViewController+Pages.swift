@@ -131,11 +131,7 @@ extension SettingsViewController {
             autoDubRows.append(contentsOf: [.autoDubLanguage, .autoDubIgnoreAI])
         }
         return [
-            Section(
-                header: "settings.section.videoQuality".localized,
-                footer: nil,
-                rows: [.quality, .qualityCellular]
-            ),
+            qualitySection,
             Section(
                 header: nil,
                 footer: "settings.footer.playback".localized,

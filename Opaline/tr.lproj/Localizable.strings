@@ -232,6 +232,8 @@
 "settings.row.pip" = "Picture-in-Picture";
 "settings.row.hideStatusBar" = "Tam Ekranda Durum Çubuğunu Gizle";
 "settings.row.zoomToFill" = "Tam Ekranda Doldurma İçin Yakınlaştır";
+"settings.row.softwareAV1" = "Yazılım AV1 ile 1440p (Beta)";
+"settings.footer.softwareAV1" = "Donanım AV1 desteği olmayan cihazlara 1440p ekler: video işlemcide çözülür ve oynatıcı için H.264 olarak yeniden kodlanır. Otomatik modda video 1440p sunuyorsa 1440p oynatılır. Daha fazla pil tüketir ve cihazı ısıtır.";
 "settings.row.showShorts" = "Shorts'ları göster";
 "settings.row.autoplay" = "Otomatik Oynatma";
 /* %1$@ = localized "Mix" term (player.related.mix) */

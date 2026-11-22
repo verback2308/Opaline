@@ -9,7 +9,7 @@ final class SettingsViewController: UIViewController {
         case pageSponsorBlock, pageCache, pageDebug, pageDownloads
         case theme, autoDarkStart, autoDarkEnd, appIcon
         case appLanguage, region
-        case quality, qualityCellular
+        case quality, qualityCellular, softwareAV1
         case backgroundPlayback, pipEnabled, hideStatusBar
         case downloadQuality, downloadComments, downloadCaptions
         case showShorts, shortsPlayer, shortsGrouping
@@ -222,6 +222,8 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 "settings.row.qualityCellular".localized,
                 value: VideoQualityStore.displayName(VideoQualityStore.cellular)
             )
+        case .softwareAV1:
+            return makeSoftwareAV1Cell()
         case .downloadQuality:
             return makeDisclosureCell(
                 "settings.row.downloadQuality".localized,
@@ -994,6 +996,8 @@ enum VideoQualityStore {
         var opts = ["Auto", "1080p", "720p", "480p", "360p"]
         if AV1Support.isHardwareSupported {
             opts.insert(contentsOf: ["2160p", "1440p"], at: 1)
+        } else if AV1Support.isSoftwareEnabled {
+            opts.insert("1440p", at: 1)
         }
         return opts
     }
@@ -1012,12 +1016,14 @@ enum VideoQualityStore {
         set { store(newValue, forKey: UserDefaultsKeys.VideoQuality.selectedCellular) }
     }
     /// Returns the maximum height for the selected quality. "Auto" caps at
-    /// 1080p — the pre-AV1 behavior; higher tiers are explicit opt-in.
+    /// 1080p — the pre-AV1 behavior; higher tiers are explicit opt-in. The
+    /// software AV1 switch is that opt-in too: with it on, Auto goes to 1440p.
     static var maxHeight: Int? {
-        [
+        let auto = AV1Support.isSoftwareEnabled ? AV1Support.softwareMaxHeight : 1_080
+        return [
             "2160p": 2_160, "1440p": 1_440, "1080p": 1_080,
             "720p": 720, "480p": 480, "360p": 360
-        ][selected] ?? 1_080
+        ][selected] ?? auto
     }
 
     /// Display text for a stored value — "Auto" is a stored constant
