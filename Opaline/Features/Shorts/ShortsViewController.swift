@@ -39,7 +39,7 @@ final class ShortsViewController: UIViewController {
     /// Like state the user changed here, which outranks the fetched page.
     var likeOverrides: [String: LikeStatus] = [:]
 
-    let playerView = ShortsPlayerView()
+    let playerView = ShortsPlayerView(), speedBoost = ShortsSpeedBoost()
     let overlay = ShortsOverlayView()
     let progressBar = UIView()
     var progressWidth: NSLayoutConstraint?
@@ -114,6 +114,7 @@ final class ShortsViewController: UIViewController {
         setupCollectionView()
         setupBackButton()
         setupOverlay()
+        speedBoost.attach(to: collectionView, badgeHost: view, player: playerView)
         prefetcher.onReady = { [weak self] _ in
             guard let self else {
                 return
