@@ -148,11 +148,11 @@ final class AV1SegmentTranscoder {
         }
         let encoded = encoder.finishSegment()
         cutter.frames = 0
-        // Nothing came back — every frame was dropped. An empty fragment
-        // would be served as a playable 0-byte segment; leave the chunk
-        // undelivered so its request fails and is retried instead.
-        guard !encoded.isEmpty else {
-            AppLog.hls("av1: chunk \(index).\(cutter.current) came out empty")
+        // Frames were lost (see `finishSegment`). A short fragment, or one
+        // not opening on a key frame, would play as a freeze or garbage;
+        // leave the chunk undelivered so its request fails and is retried.
+        guard encoded.first?.isSync == true else {
+            AppLog.hls("av1: chunk \(index).\(cutter.current) lost frames")
             return
         }
         let lastDuration = encoded.last.map { cutter.duration(at: $0.timestamp) } ?? 0

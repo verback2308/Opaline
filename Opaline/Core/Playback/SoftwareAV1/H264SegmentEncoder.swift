@@ -145,12 +145,14 @@ final class H264SegmentEncoder {
         ) { [weak self] status, _, sample in
             guard status == noErr, let sample else {
                 AppLog.hls("av1: encoder dropped a frame (\(status))")
-                self?.noteFailure(status)
+                self?.noteDropped(status)
                 return
             }
             self?.collect(sample, sourceTime: sourceTime)
         }
-        noteFailure(submitted)
+        if submitted != noErr {
+            noteDropped(submitted)
+        }
     }
 
     /// Waits for every submitted frame and hands them back, in submission
@@ -167,13 +169,14 @@ final class H264SegmentEncoder {
         return damaged ? [] : output
     }
 
-    private func noteFailure(_ status: OSStatus) {
-        guard status == kVTInvalidSessionErr || status == kVTVideoEncoderMalfunctionErr else {
-            return
-        }
+    /// Any frame lost spoils its chunk; a session that is gone or broken is
+    /// also replaced.
+    private func noteDropped(_ status: OSStatus) {
         lock.lock()
-        sessionLost = true
         damaged = true
+        if status == kVTInvalidSessionErr || status == kVTVideoEncoderMalfunctionErr {
+            sessionLost = true
+        }
         lock.unlock()
     }
 
