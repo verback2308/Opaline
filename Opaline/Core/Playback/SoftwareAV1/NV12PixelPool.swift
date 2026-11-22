@@ -1,3 +1,4 @@
+import Accelerate
 import CoreVideo
 import Dav1d
 import Foundation
@@ -77,22 +78,48 @@ private struct SourcePlanes {
     let lumaStride: Int
     let chromaStride: Int
 
-    /// NV12 keeps U and V interleaved in one plane: UVUV…
+    /// NV12 keeps U and V interleaved in one plane: UVUV… — done with
+    /// vImage, which vectorises it; a plain loop cost a few fps at 1440p60.
     func interleaveChroma(
         into out: UnsafeMutablePointer<UInt8>,
         stride: Int,
         width: Int,
         height: Int
     ) {
-        for row in 0..<height {
-            let dest = out + row * stride
-            let srcU = chromaU + row * chromaStride
-            let srcV = chromaV + row * chromaStride
-            for column in 0..<width {
-                dest[2 * column] = srcU[column]
-                dest[2 * column + 1] = srcV[column]
+        var planeU = buffer(chromaU, width: width, height: height)
+        var planeV = buffer(chromaV, width: width, height: height)
+        withUnsafePointer(to: &planeU) { pointerU in
+            withUnsafePointer(to: &planeV) { pointerV in
+                var sources: [UnsafePointer<vImage_Buffer>?] = [pointerU, pointerV]
+                var destinations: [UnsafeMutableRawPointer?] = [
+                    UnsafeMutableRawPointer(out),
+                    UnsafeMutableRawPointer(out + 1)
+                ]
+                _ = vImageConvert_PlanarToChunky8(
+                    &sources,
+                    &destinations,
+                    2,
+                    2,
+                    vImagePixelCount(width),
+                    vImagePixelCount(height),
+                    stride,
+                    vImage_Flags(kvImageNoFlags)
+                )
             }
         }
+    }
+
+    private func buffer(
+        _ plane: UnsafeMutablePointer<UInt8>,
+        width: Int,
+        height: Int
+    ) -> vImage_Buffer {
+        vImage_Buffer(
+            data: plane,
+            height: vImagePixelCount(height),
+            width: vImagePixelCount(width),
+            rowBytes: chromaStride
+        )
     }
 }
 
