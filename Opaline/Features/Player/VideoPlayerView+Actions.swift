@@ -121,8 +121,11 @@ extension VideoPlayerView {
         )
     }
 
+    /// For flows that keep the controls up on purpose (speed overlay, scrub,
+    /// end screen): this also drops a pending hide-on-resume.
     func pauseAutoHide() {
         hideWorkItem?.cancel()
+        multitaskPause.autoHideOnResume = false
     }
 }
 
