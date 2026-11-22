@@ -140,7 +140,7 @@ extension VideoPlayerView {
             options: [.new]
         ) { [weak self] observed, _ in
             DispatchQueue.main.async {
-                self?.noteSystemPause(rate: observed.rate)
+                self?.rateChanged(to: observed.rate)
                 if observed.rate > 0 { self?.isAtEnd = false }
                 self?.updatePlayPauseIcon()
             }
