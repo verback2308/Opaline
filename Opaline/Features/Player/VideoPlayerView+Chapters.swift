@@ -13,6 +13,11 @@ extension VideoPlayerView {
         chapterButton.contentHorizontalAlignment = .leading
         chapterButton.isHidden = true
         chapterButton.translatesAutoresizingMaskIntoConstraints = false
+        // A long title gives way, never the times beside it.
+        chapterButton.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        for label in [currentTimeLabel, durationLabel] {
+            label.setContentCompressionResistancePriority(.required, for: .horizontal)
+        }
         chapterButton.addTarget(
             self,
             action: #selector(chapterButtonTapped),
@@ -31,7 +36,9 @@ extension VideoPlayerView {
                 lessThanOrEqualTo: durationLabel.leadingAnchor,
                 constant: -12
             ),
-            chapterButton.heightAnchor.constraint(equalToConstant: 32)
+            // No taller than this: the seek bar's touch band ends 4pt above
+            // the time label, and anything higher would sit on top of it.
+            chapterButton.heightAnchor.constraint(equalToConstant: 22)
         ])
     }
 
@@ -59,7 +66,10 @@ extension VideoPlayerView {
     }
 
     func updateChapterTitle(at seconds: Double) {
-        guard let index = VideoChapter.index(at: seconds, in: chapters) else {
+        let index = VideoChapter.index(at: seconds, in: chapters)
+        // Before the first chapter starts there is nothing to name.
+        chapterButton.isHidden = index == nil
+        guard let index else {
             chapterButton.setTitle(nil, for: .normal)
             return
         }

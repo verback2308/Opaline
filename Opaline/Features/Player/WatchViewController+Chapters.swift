@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 
 // MARK: - Chapters
@@ -30,11 +31,21 @@ extension WatchViewController {
             return PlayerMenuItem(
                 title: "\(marker)\(formatTime(chapter.start))  \(chapter.title)"
             ) { [weak self] in
-                self?.seekPlayer(toSeconds: Int(chapter.start))
+                self?.seekToChapter(chapter)
             }
         }
         presentPlayerMenu(
             title: "player.menu.chapters".localized, items: items
+        )
+    }
+
+    /// To the exact start: rounding down to the second can land just inside
+    /// the chapter before, which would then show as the current one.
+    private func seekToChapter(_ chapter: VideoChapter) {
+        videoPlayerView?.player?.seek(
+            to: CMTime(seconds: chapter.start, preferredTimescale: 600),
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
         )
     }
 }

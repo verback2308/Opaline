@@ -45,7 +45,7 @@ extension VideoPlayerView {
         clockResync.workItem = nil
         playerLayer.isHidden = false
         playerLayer.player = nil
-        player = nil
+        (player, duration) = (nil, 0)  // the next item's gaps must not use this length
         hideSkipButton()
         sponsorSegments = []
         seekBar.setSegments([])

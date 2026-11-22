@@ -82,6 +82,11 @@ extension InnertubeClient {
     private static func sortedChapters(
         _ chapters: [VideoChapter]
     ) -> [VideoChapter] {
-        chapters.sorted { $0.start < $1.start }
+        // Two chapters at one start would draw one gap twice and leave the
+        // first unreachable as "current".
+        var seen = Set<Double>()
+        return chapters
+            .sorted { $0.start < $1.start }
+            .filter { seen.insert($0.start).inserted }
     }
 }
