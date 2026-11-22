@@ -14,7 +14,7 @@ extension SABRDelivery.Route {
         var routed = self
         let source = self
         routed.transcode = AV1TranscodeSession(
-            segmentCount: video.segments.count,
+            plan: AV1ChunkPlan(segments: video.segments),
             fps: video.format.fps ?? 30
         ) { index, completion in
             let name = index.map(String.init) ?? "init"
@@ -30,6 +30,15 @@ extension SABRDelivery.Route {
 }
 
 extension SABRDelivery {
+    /// A media playlist — the video one cut into chunks when it is transcoded.
+    static func playlist(named name: String, route: Route) -> Data? {
+        guard name == "video", let transcode = route.transcode else {
+            return mediaPlaylist(named: name, route: route)
+        }
+        let base = "/g\(route.generation)/s/video"
+        return Data(transcode.plan.playlist(base: base, startAt: route.startAt).utf8)
+    }
+
     /// The main playlist. With a transcoded video track it waits for the
     /// transcoder: CODECS must name what the encoder really produces.
     static func serveMain(route: Route, completion: @escaping (Data?, String) -> Void) {
@@ -52,8 +61,8 @@ extension SABRDelivery {
         let respond: AV1TranscodeSession.Completion = { completion($0, "video/mp4") }
         if name == "init" {
             session.initSegment(completion: respond)
-        } else if let index = Int(name) {
-            session.segment(index, completion: respond)
+        } else if let id = AV1ChunkID(name: name) {
+            session.chunk(id, completion: respond)
         } else {
             completion(nil, "")
         }

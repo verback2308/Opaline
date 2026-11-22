@@ -47,7 +47,7 @@ extension SABRDelivery {
         }
         if rest.count == 1, rest[0].hasSuffix(".m3u8") {
             let name = String(rest[0].dropLast(5))
-            completion(mediaPlaylist(named: name, route: route), playlistType)
+            completion(playlist(named: name, route: route), playlistType)
             return
         }
         guard rest.count == 3, rest[0] == "s",

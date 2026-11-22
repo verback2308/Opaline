@@ -16,7 +16,7 @@ final class AV1RangeTranscoding {
         playlists: Playlists
     ) {
         let session = AV1TranscodeSession(
-            segmentCount: segments.count,
+            plan: AV1ChunkPlan(segments: segments),
             fps: input.videoFormat.fps ?? 30
         ) { index, completion in
             HLSPlaybackBuilder.fetchRangeData(
@@ -118,8 +118,8 @@ final class AV1RangeTranscoding {
         let respond: AV1TranscodeSession.Completion = { completion($0, "video/mp4") }
         if parts[1] == "init" {
             session.initSegment(completion: respond)
-        } else if let index = Int(parts[1]) {
-            session.segment(index, completion: respond)
+        } else if let id = AV1ChunkID(name: parts[1]) {
+            session.chunk(id, completion: respond)
         } else {
             completion(nil, "")
         }
@@ -135,11 +135,7 @@ private struct Playlists {
 
     init(input: HLSPlaybackBuilder.BuildInput, segments: [SidxSegment], loader: HLSPlaylistLoader) {
         self.input = input
-        let video = HLSGenerator.segmentedPlaylist(
-            base: "av1",
-            segments: segments,
-            startAt: input.startAt
-        )
+        let video = AV1ChunkPlan(segments: segments).playlist(base: "av1", startAt: input.startAt)
         media = [
             "video.m3u8": Data(video.utf8),
             "audio.m3u8": loader.playlist(at: "audio.m3u8") ?? Data()

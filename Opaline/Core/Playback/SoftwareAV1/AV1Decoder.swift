@@ -12,6 +12,9 @@ struct DecodedFrame {
 /// `CVPixelBuffer`s, the layout VideoToolbox's encoder takes without a copy
 /// of its own. Only 8-bit 4:2:0 is supported — what YouTube's SDR AV1 is.
 final class AV1Decoder {
+    /// Pictures before this time are decoded — later frames depend on
+    /// them — but dropped without the conversion a kept one costs.
+    var skipBefore = Int64.min
     private var context: OpaquePointer?
     private let pixelPool: NV12PixelPool
 
@@ -60,7 +63,7 @@ final class AV1Decoder {
     private func drainReady(sink: (DecodedFrame) -> Void) {
         var picture = Dav1dPicture()
         while dav1d_get_picture(context, &picture) == 0 {
-            if let frame = pixelPool.frame(from: picture) {
+            if picture.m.timestamp >= skipBefore, let frame = pixelPool.frame(from: picture) {
                 sink(frame)
             }
             dav1d_picture_unref(&picture)
