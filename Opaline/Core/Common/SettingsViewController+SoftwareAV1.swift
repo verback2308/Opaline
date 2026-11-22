@@ -23,7 +23,7 @@ extension SettingsViewController {
     func makeSoftwareAV1Cell() -> UITableViewCell {
         makeToggleCell(
             "settings.row.softwareAV1".localized,
-            isOn: AV1Support.isSoftwareEnabled
+            isOn: AV1Support.isSoftwarePreferred
         ) { [weak self] isOn in
             UserDefaults.standard.set(isOn, forKey: UserDefaultsKeys.Playback.softwareAV1)
             // 1440p joins or leaves the quality options; a stored 1440p the

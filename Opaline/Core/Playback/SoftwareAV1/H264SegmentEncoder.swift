@@ -29,7 +29,7 @@ final class H264SegmentEncoder {
     /// them — so it runs on its own clock, stepping by each frame's real
     /// duration (rate control budgets bits per second of that clock) and by
     /// one nominal frame across any jump. Samples keep their source time.
-    private var clock = EncoderClock()
+    private var clock: EncoderClock
     private(set) var parameterSets: H264ParameterSets?
 
     init?(width: Int, height: Int, bitrate: Int, fps: Int) {
@@ -50,6 +50,7 @@ final class H264SegmentEncoder {
             return nil
         }
         session = created
+        clock = EncoderClock(fps: fps)
         configure(bitrate: bitrate, fps: fps)
         VTCompressionSessionPrepareToEncodeFrames(session)
     }
@@ -163,11 +164,16 @@ final class H264SegmentEncoder {
 
 /// A presentation clock that only moves forward (see `H264SegmentEncoder`).
 private struct EncoderClock {
+    let fps: Int
     private var now: Int64 = 0
     private var lastSource: Int64?
 
+    init(fps: Int) {
+        self.fps = max(1, fps)
+    }
+
     mutating func advance(to source: Int64, timescale: Int32) -> Int64 {
-        let nominal = Int64(timescale) / 30
+        let nominal = max(1, Int64(timescale) / Int64(fps))
         let step = lastSource.map { source - $0 } ?? nominal
         // A jump — a new segment out of order, a seek — counts as one frame.
         now += step > 0 && step < Int64(timescale) ? step : nominal

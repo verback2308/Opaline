@@ -153,7 +153,11 @@ private extension InnertubeClient {
         return mime.contains("avc1")
             || (AV1Support.isHardwareSupported
                 && mime.contains("av01"))
-            || AV1Support.isSoftwarePlayable(mime: mime, height: fmtHeight(fmt))
+            || AV1Support.isSoftwarePlayable(
+                mime: mime,
+                height: fmtHeight(fmt),
+                fps: fmt["fps"] as? Int ?? 30
+            )
     }
 
     static func selectBestVideo(

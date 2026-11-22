@@ -17,7 +17,7 @@ final class AV1RangeTranscoding {
     ) {
         let session = AV1TranscodeSession(
             plan: AV1ChunkPlan(segments: segments),
-            fps: input.videoFormat.fps ?? 30
+            format: (height: input.videoFormat.height ?? 0, fps: input.videoFormat.fps ?? 30)
         ) { index, completion in
             HLSPlaybackBuilder.fetchRangeData(
                 request: Self.range(of: index, input: input, segments: segments),
@@ -51,14 +51,28 @@ final class AV1RangeTranscoding {
             completion(nil)
             return
         }
-        // Set the transcoder up before handing out the item: a stream it
-        // cannot take fails here, where the chain can still fall back.
-        transcoding.session.codecs { codecs in
-            guard codecs != nil else {
+        // Set the transcoder up before handing out the item — a stream it
+        // cannot take fails here, where the chain can still fall back — while
+        // the server starts alongside.
+        let group = DispatchGroup()
+        var codecs: String?
+        var base: URL?
+        group.enter()
+        transcoding.session.codecs {
+            codecs = $0
+            group.leave()
+        }
+        group.enter()
+        transcoding.server.start {
+            base = $0
+            group.leave()
+        }
+        group.notify(queue: .main) {
+            guard codecs != nil, let base else {
                 completion(nil)
                 return
             }
-            transcoding.start(result: result, input: input, completion: completion)
+            transcoding.start(at: base, result: result, input: input, completion: completion)
         }
     }
 
@@ -120,25 +134,20 @@ final class AV1RangeTranscoding {
     }
 
     private func start(
+        at base: URL,
         result: HLSPlaybackBuilder.Result,
         input: HLSPlaybackBuilder.BuildInput,
         completion: @escaping (HLSPlaybackBuilder.Result?) -> Void
     ) {
-        server.start { base in
-            guard let base else {
-                completion(nil)
-                return
-            }
-            result.loader.keepAlive = self
-            AppLog.hls("av1: transcoding \(input.videoFormat.itag) through \(base.absoluteString)")
-            let asset = AVURLAsset(
-                url: base.appendingPathComponent("master.m3u8"),
-                options: ["AVURLAssetHTTPHeaderFieldsKey": input.headers]
-            )
-            let item = AVPlayerItem(asset: asset)
-            PlaybackBufferPolicy.configure(item: item)
-            completion(HLSPlaybackBuilder.Result(playerItem: item, loader: result.loader))
-        }
+        result.loader.keepAlive = self
+        AppLog.hls("av1: transcoding \(input.videoFormat.itag) through \(base.absoluteString)")
+        let asset = AVURLAsset(
+            url: base.appendingPathComponent("master.m3u8"),
+            options: ["AVURLAssetHTTPHeaderFieldsKey": input.headers]
+        )
+        let item = AVPlayerItem(asset: asset)
+        PlaybackBufferPolicy.configure(item: item)
+        completion(HLSPlaybackBuilder.Result(playerItem: item, loader: result.loader))
     }
 }
 
@@ -160,12 +169,12 @@ private struct Playlists {
 
     func main(videoCodecs: String) -> String {
         let format = input.videoFormat
-        let bitrate = AV1SegmentTranscoder.bitrate(
+        let peak = AV1SegmentTranscoder.peakBitrate(
             height: format.height ?? 0,
             fps: format.fps ?? 30
         )
         return HLSGenerator.mainPlaylist(
-            bandwidth: 2 * bitrate + input.audioFormat.bitrate,
+            bandwidth: peak + input.audioFormat.bitrate,
             codecs: "\(videoCodecs),\(input.audioFormat.codecs)",
             resolution: "\(format.width ?? 1_280)x\(format.height ?? 720)",
             uris: HLSGenerator.PlaylistURIs(video: "video.m3u8", audio: "audio.m3u8")

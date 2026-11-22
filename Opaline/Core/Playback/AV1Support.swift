@@ -19,31 +19,36 @@ enum AV1Support {
     }()
 
     private static let lock = NSLock()
-    private static var softwareUnavailable = false
+    /// Format shapes ("1440x60") the transcoder could not set up for.
+    private static var failedShapes = Set<String>()
 
-    /// The beta setting, on a device that needs it, unless a stream already
-    /// proved it cannot be transcoded here.
-    static var isSoftwareEnabled: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return !isHardwareSupported
-            && !softwareUnavailable
-            && UserDefaults.standard.bool(forKey: UserDefaultsKeys.Playback.softwareAV1)
+    /// The stored beta setting — what the switch in Settings shows.
+    static var isSoftwarePreferred: Bool {
+        UserDefaults.standard.bool(forKey: UserDefaultsKeys.Playback.softwareAV1)
     }
 
-    /// Steps the beta aside for the rest of the launch after a stream the
-    /// transcoder could not set up for — the next attempt then picks from
-    /// the avc1 ladder and plays, rather than failing the same way again.
-    static func markSoftwareUnavailable() {
+    /// The beta setting, on a device that needs it.
+    static var isSoftwareEnabled: Bool {
+        !isHardwareSupported && isSoftwarePreferred
+    }
+
+    /// Takes a format shape out of the beta for the rest of the launch after
+    /// the transcoder could not set up for it — the next attempt then picks
+    /// another format and plays, rather than failing the same way again.
+    static func markSoftwareUnavailable(height: Int, fps: Int) {
         lock.lock()
-        softwareUnavailable = true
+        failedShapes.insert("\(height)x\(fps)")
         lock.unlock()
     }
 
     /// Whether a format may be offered through the transcoder: 8-bit AV1
     /// (SDR; dav1d's 10-bit output is not converted) above 1080p.
-    static func isSoftwarePlayable(mime: String, height: Int) -> Bool {
-        isSoftwareEnabled
+    static func isSoftwarePlayable(mime: String, height: Int, fps: Int) -> Bool {
+        lock.lock()
+        let failed = failedShapes.contains("\(height)x\(fps)")
+        lock.unlock()
+        return isSoftwareEnabled
+            && !failed
             && mime.contains("av01")
             && mime.contains(".08")
             && height > 1_080

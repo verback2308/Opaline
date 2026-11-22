@@ -19,6 +19,7 @@ final class AV1TranscodeSession {
     let plan: AV1ChunkPlan
     private let fetchSource: SourceFetch
     private let fps: Int
+    private let height: Int
     /// State only — every hop here is short, so cache hits never wait.
     private let queue = DispatchQueue(label: "com.ytvlite.av1-session", qos: .userInitiated)
     /// The transcodes themselves, one at a time.
@@ -28,7 +29,7 @@ final class AV1TranscodeSession {
     private var initData: Data?
     private var initWaiters: [Completion] = []
     private var cannotTranscode = false
-    private var cache = ChunkCache(limit: AV1TranscodeSession.cacheBytes)
+    private var cache = AV1ChunkCache(limit: AV1TranscodeSession.cacheBytes)
     private var waiters: [AV1ChunkID: [Completion]] = [:]
     private var sources: [Int: Data] = [:]
     private var fetching = Set<Int>()
@@ -42,12 +43,13 @@ final class AV1TranscodeSession {
     /// fetching it again before the first playlist can be answered.
     init(
         plan: AV1ChunkPlan,
-        fps: Int,
+        format: (height: Int, fps: Int),
         initSource: Data? = nil,
         fetchSource: @escaping SourceFetch
     ) {
         self.plan = plan
-        self.fps = fps
+        self.fps = format.fps
+        self.height = format.height
         self.initSource = initSource
         self.fetchSource = fetchSource
     }
@@ -72,7 +74,11 @@ final class AV1TranscodeSession {
                     completion(nil)
                     return
                 }
-                self.moveWindow(to: id.segment)
+                // A cache hit behind the window (the player re-reading
+                // what it already played) must not cancel the lookahead.
+                if self.cache[id] == nil || id.segment > self.window.lowerBound {
+                    self.moveWindow(to: id.segment)
+                }
                 self.request(id, completion: completion)
                 for ahead in 1...Self.lookahead {
                     self.prepare(id.segment + ahead)
@@ -113,7 +119,7 @@ final class AV1TranscodeSession {
             } else {
                 AppLog.hls("av1: this stream cannot be transcoded here")
                 cannotTranscode = true
-                AV1Support.markSoftwareUnavailable()
+                AV1Support.markSoftwareUnavailable(height: height, fps: fps)
             }
         }
         let pending = initWaiters
@@ -211,13 +217,14 @@ final class AV1TranscodeSession {
     }
 
     private func deliver(_ id: AV1ChunkID, _ data: Data) {
-        cache.store(data, at: id)
+        cache.store(data, at: id, playhead: window.lowerBound)
         let pending = waiters.removeValue(forKey: id) ?? []
         pending.forEach { $0(data) }
     }
 
     private func finishSegment(_ segment: Int, stats: TranscodeStats?) {
         let first = transcoding?.chunk ?? 0
+        let cancelled = transcodingCancel?.isRaised ?? false
         transcoding = nil
         transcodingCancel = nil
         if let stats {
@@ -225,9 +232,11 @@ final class AV1TranscodeSession {
             AppLog.hls("av1 seg \(segment): \(stats.frames) frames in \(timing)")
         }
         // A chunk before the first one this pass made was asked for while it
-        // ran (a seek back within the segment): go round again for it.
-        // Anything else still waiting was not produced — answer it.
-        if waiters.keys.contains(where: { $0.segment == segment && $0.chunk < first }) {
+        // ran (a seek back within the segment), or the pass was dropped and
+        // someone asked for it since: go round again. Anything else still
+        // waiting was not produced — answer it.
+        let missed = waiters.keys.contains { $0.segment == segment && $0.chunk < first }
+        if missed || (cancelled && hasWaiters(segment)) {
             prepare(segment)
         } else {
             failWaiters(of: segment)
@@ -260,34 +269,5 @@ private extension AV1TranscodeSession {
 
     func isCached(_ segment: Int) -> Bool {
         cache[AV1ChunkID(segment: segment, chunk: plan.chunkCount(of: segment) - 1)] != nil
-    }
-}
-
-/// Transcoded chunks, kept within a byte budget; the ones farthest from the
-/// newest go first.
-private struct ChunkCache {
-    let limit: Int
-    private var entries: [AV1ChunkID: Data] = [:]
-    private var bytes = 0
-
-    init(limit: Int) {
-        self.limit = limit
-    }
-
-    mutating func store(_ data: Data, at id: AV1ChunkID) {
-        bytes += data.count - (entries[id]?.count ?? 0)
-        entries[id] = data
-        while bytes > limit, let farthest = farthest(from: id) {
-            bytes -= entries.removeValue(forKey: farthest)?.count ?? 0
-        }
-    }
-
-    private func farthest(from id: AV1ChunkID) -> AV1ChunkID? {
-        let distance: (AV1ChunkID) -> Int = { abs($0.segment - id.segment) }
-        return entries.keys.filter { $0 != id }.max { distance($0) < distance($1) }
-    }
-
-    subscript(id: AV1ChunkID) -> Data? {
-        entries[id]
     }
 }

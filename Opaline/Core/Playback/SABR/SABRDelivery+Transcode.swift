@@ -15,7 +15,7 @@ extension SABRDelivery.Route {
         let source = self
         routed.transcode = AV1TranscodeSession(
             plan: AV1ChunkPlan(segments: video.segments),
-            fps: video.format.fps ?? 30,
+            format: (height: video.format.height ?? 0, fps: video.format.fps ?? 30),
             initSource: video.initData.isEmpty ? nil : video.initData
         ) { index, completion in
             let name = index.map(String.init) ?? "init"
@@ -49,32 +49,18 @@ extension SABRDelivery {
             return
         }
         transcode.codecs { codecs in
-            let playlist = codecs.map { transcodedMainPlaylist(route: route, videoCodecs: $0) }
+            let video = codecs.map { codecs in
+                TranscodedVideo(
+                    codecs: codecs,
+                    peak: AV1SegmentTranscoder.peakBitrate(
+                        height: route.tracks.first?.format.height ?? 0,
+                        fps: route.tracks.first?.format.fps ?? 30
+                    )
+                )
+            }
+            let playlist = video.map { mainPlaylist(route: route, transcoded: $0) }
             completion(playlist.map { Data($0.utf8) }, playlistType)
         }
-    }
-
-    /// The main playlist for a transcoded video track: what the encoder makes
-    /// is what CODECS and BANDWIDTH must describe, not the AV1 source.
-    private static func transcodedMainPlaylist(route: Route, videoCodecs: String) -> String {
-        guard route.tracks.count == 2, let video = route.tracks.first,
-              let audio = route.tracks.last else {
-            return ""
-        }
-        let videoPeak = 2 * AV1SegmentTranscoder.bitrate(
-            height: video.format.height ?? 0,
-            fps: video.format.fps ?? 30
-        )
-        let audioPeak = HLSGenerator.peakBitrate(audio.segments, fallback: audio.format.bitrate)
-        return HLSGenerator.mainPlaylist(
-            bandwidth: videoPeak + audioPeak,
-            codecs: "\(videoCodecs),\(audio.format.codecs)",
-            resolution: "\(video.format.width ?? 1_280)x\(video.format.height ?? 720)",
-            uris: HLSGenerator.PlaylistURIs(
-                video: "/g\(route.generation)/\(video.path).m3u8",
-                audio: "/g\(route.generation)/\(audio.path).m3u8"
-            )
-        )
     }
 
     static func serveTranscoded(
@@ -91,4 +77,32 @@ extension SABRDelivery {
             completion(nil, "")
         }
     }
+}
+
+extension SABRDelivery {
+    /// The server, once the route's transcoder — if it has one — is set up:
+    /// a stream it cannot take fails here, before the item is handed out,
+    /// where the chain can still fall back to another way of playing.
+    func withTranscoderAndServer(_ completion: @escaping (URL?) -> Void) {
+        guard let transcode = route?.transcode else {
+            withServer(completion)
+            return
+        }
+        transcode.codecs { codecs in
+            Self.attachQueue.async {
+                guard codecs != nil else {
+                    AppLog.hls("av1: transcoder could not be set up over SABR")
+                    completion(nil)
+                    return
+                }
+                self.withServer(completion)
+            }
+        }
+    }
+}
+
+/// What a transcoded video track is, for its main playlist entry.
+struct TranscodedVideo {
+    let codecs: String
+    let peak: Int
 }

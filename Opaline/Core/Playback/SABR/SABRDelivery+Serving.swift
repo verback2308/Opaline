@@ -75,17 +75,18 @@ extension SABRDelivery {
     }
 
     /// Main playlist pointing at the two media playlists.
-    static func mainPlaylist(route: Route) -> String {
+    static func mainPlaylist(route: Route, transcoded: TranscodedVideo? = nil) -> String {
         guard route.tracks.count == 2,
               let video = route.tracks.first,
               let audio = route.tracks.last else {
             return ""
         }
         let audioPeak = HLSGenerator.peakBitrate(audio.segments, fallback: audio.format.bitrate)
-        let videoPeak = HLSGenerator.peakBitrate(video.segments, fallback: video.format.bitrate)
+        let videoPeak = transcoded?.peak
+            ?? HLSGenerator.peakBitrate(video.segments, fallback: video.format.bitrate)
         return HLSGenerator.mainPlaylist(
             bandwidth: videoPeak + audioPeak,
-            codecs: "\(video.format.codecs),\(audio.format.codecs)",
+            codecs: "\(transcoded?.codecs ?? video.format.codecs),\(audio.format.codecs)",
             resolution: "\(video.format.width ?? 1_280)x\(video.format.height ?? 720)",
             uris: HLSGenerator.PlaylistURIs(
                 video: "/g\(route.generation)/\(video.path).m3u8",
@@ -258,7 +259,7 @@ extension SABRDelivery {
         ).withTranscoding()
         pendingStartAt = nil
         let path = "g\(generation)/master.m3u8"
-        withServer { base in
+        withTranscoderAndServer { base in
             guard let base else {
                 completion(.failure(SABRError.server("local server did not come up")))
                 return
@@ -275,7 +276,7 @@ extension SABRDelivery {
     }
 
     /// The single server for this source, started on first use.
-    private func withServer(_ completion: @escaping (URL?) -> Void) {
+    func withServer(_ completion: @escaping (URL?) -> Void) {
         if let base = serverBase {
             completion(base)
             return

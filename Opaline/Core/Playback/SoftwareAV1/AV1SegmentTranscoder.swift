@@ -55,9 +55,13 @@ final class AV1SegmentTranscoder {
         )
     }
 
+    /// What playlists declare: single segments run up to twice the average.
+    static func peakBitrate(height: Int, fps: Int) -> Int {
+        2 * bitrate(height: height, fps: fps)
+    }
+
     /// Roughly two to three times what YouTube spends on AV1 at the same
-    /// size — H.264 needs that to look the same. An average: single segments
-    /// run up to twice it, which is what playlists should declare.
+    /// size — H.264 needs that to look the same. An average.
     static func bitrate(height: Int, fps: Int) -> Int {
         let base = height >= 2_000 ? 30_000_000 : height >= 1_400 ? 16_000_000 : 8_000_000
         return fps > 30 ? base * 3 / 2 : base
