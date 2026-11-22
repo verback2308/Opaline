@@ -21,6 +21,9 @@ final class AV1RangeTranscoding {
         ) { index, completion in
             HLSPlaybackBuilder.fetchRangeData(
                 request: Self.range(of: index, input: input, segments: segments),
+                // An error page is not a segment: nil lets the session retry
+                // instead of judging the stream by it.
+                strict: true,
                 completion: completion
             )
         }

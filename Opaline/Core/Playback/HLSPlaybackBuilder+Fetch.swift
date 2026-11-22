@@ -78,9 +78,11 @@ extension HLSPlaybackBuilder {
         task.resume()
     }
 
-    /// Fetch a byte range from a URL with custom headers.
+    /// Fetch a byte range from a URL with custom headers. `strict` answers
+    /// an error status with nil rather than with the error page's body.
     static func fetchRangeData(
         request: RangeRequest,
+        strict: Bool = false,
         completion: @escaping (Data?) -> Void
     ) {
         var urlReq = URLRequest(url: request.url)
@@ -97,10 +99,11 @@ extension HLSPlaybackBuilder {
             }
             let http = response as? HTTPURLResponse
             let code = http?.statusCode ?? 0
-            if code != 206, code != 200 {
+            let failed = code != 206 && code != 200
+            if failed {
                 logRangeFailure(code: code, request: request, http: http, data: data)
             }
-            completion(data)
+            completion(failed && strict ? nil : data)
         }
         task.resume()
     }

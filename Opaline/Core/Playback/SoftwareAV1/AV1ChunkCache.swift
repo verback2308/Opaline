@@ -32,6 +32,11 @@ struct AV1ChunkCache {
         return others.max(by: Self.precedes)
     }
 
+    /// Bytes held for chunks after `id`: the lookahead.
+    func bytes(after id: AV1ChunkID) -> Int {
+        entries.filter { Self.precedes(id, $0.key) }.reduce(0) { $0 + $1.value.count }
+    }
+
     subscript(id: AV1ChunkID) -> Data? {
         entries[id]
     }

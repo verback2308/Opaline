@@ -11,10 +11,9 @@ final class AV1TranscodeSession {
     typealias SourceFetch = (_ index: Int?, _ completion: @escaping Completion) -> Void
 
     private static let lookahead = 2
-    /// Chunks are fetched once in normal playback; the cache only bridges
-    /// the gap between transcoding ahead and being asked. Bounded in bytes —
-    /// a 1440p60 chunk runs to several MB, and these devices have 2 GB.
-    private static let cacheBytes = 48 << 20
+    /// Bridges transcoding ahead and being asked; a 1440p60 chunk runs to
+    /// MBs on 2 GB devices. The lookahead keeps to half (`lookaheadFull`).
+    private static let cacheBytes = 64 << 20
 
     let plan: AV1ChunkPlan
     private let fetchSource: SourceFetch
@@ -96,9 +95,8 @@ final class AV1TranscodeSession {
 
     // MARK: - Queue-confined
 
-    /// Runs `body` once the transcoder exists, building it from the source
-    /// init segment on first use. A failed fetch is retried on the next
-    /// call; a stream the transcoder cannot take is given up on for good.
+    /// Runs `body` once the transcoder exists, built from the init segment on
+    /// first use. A failed fetch is retried; an unusable stream is not.
     private func withTranscoder(_ body: @escaping (AV1SegmentTranscoder?) -> Void) {
         if transcoder != nil || cannotTranscode {
             body(transcoder)
@@ -176,8 +174,7 @@ final class AV1TranscodeSession {
         } else if !closed, window.contains(segment) || hasWaiters(segment) {
             sources[segment] = data
         }
-        // Whatever happened to this one, a segment held back behind it
-        // may be next now.
+        // Whatever happened to it, a segment held back behind it may be next.
         pump()
     }
 
@@ -217,7 +214,8 @@ final class AV1TranscodeSession {
             return wanted
         }
         let pending = ready.union(fetching).filter(window.contains)
-        guard let lowest = pending.min(), ready.contains(lowest) else {
+        guard let lowest = pending.min(), ready.contains(lowest),
+              lowest == playhead.segment || !lookaheadFull else {
             return nil
         }
         return lowest
@@ -238,9 +236,8 @@ final class AV1TranscodeSession {
             let timing = String(format: "%.2fs (%.0f fps)", stats.seconds, stats.framesPerSecond)
             AppLog.hls("av1 seg \(segment): \(stats.frames) frames in \(timing)")
         }
-        // A chunk before the first one this pass made was asked for while it
-        // ran (a seek back within the segment), or the pass was dropped and
-        // someone asked for it since: go round again. Anything else still
+        // A chunk before this pass's first was asked for (a seek back), or the
+        // dropped pass is wanted again: go round again. Anything else still
         // waiting was not produced — answer it.
         let missed = waiters.keys.contains { $0.segment == segment && $0.chunk < first }
         if missed || (cancelled && hasWaiters(segment)) {
@@ -272,6 +269,12 @@ extension AV1TranscodeSession {
 // MARK: - Bookkeeping
 
 private extension AV1TranscodeSession {
+    /// The lookahead stops while what is cached ahead of the playhead fills
+    /// half the cache: a segment evicted before it is played costs a stall.
+    var lookaheadFull: Bool {
+        cache.bytes(after: playhead) >= Self.cacheBytes / 2
+    }
+
     func failWaiters(of segment: Int) {
         for id in waiters.keys where id.segment == segment {
             waiters.removeValue(forKey: id)?.forEach { $0(nil) }
