@@ -15,6 +15,10 @@ struct DecodedFrame {
 /// `CVPixelBuffer`s, the layout VideoToolbox's encoder takes without a copy
 /// of its own. Only 8-bit 4:2:0 is supported — what YouTube's SDR AV1 is.
 final class AV1Decoder {
+    private enum PictureResult {
+        case delivered, notReady, failed
+    }
+
     /// Pictures before this time are decoded — later frames depend on
     /// them — but dropped without the conversion a kept one costs.
     var skipBefore = Int64.min
@@ -46,31 +50,36 @@ final class AV1Decoder {
         }
         bytes.copyBytes(to: buffer, count: bytes.count)
         data.m.timestamp = timestamp
-        while data.sz > 0 {
-            let result = dav1d_send_data(context, &data)
-            if result != 0, result != -EAGAIN {
+        // dav1d's documented loop: one picture per send. Asking again until
+        // it has none would make it drain — wait out every frame in flight —
+        // and frame threading would never overlap anything.
+        repeat {
+            let sent = dav1d_send_data(context, &data)
+            guard sent == 0 || sent == -EAGAIN, nextPicture(sink: sink) != .failed else {
                 dav1d_data_unref(&data)
                 return false
             }
-            drainReady(sink: sink)
-        }
+        } while data.sz > 0
         return true
     }
 
-    /// Collects pictures still held back by frame threading once a segment's
+    /// Collects the pictures frame threading still holds once a segment's
     /// samples have all been sent.
     func drain(sink: (DecodedFrame) -> Void) {
-        drainReady(sink: sink)
+        while nextPicture(sink: sink) == .delivered {}
     }
 
-    private func drainReady(sink: (DecodedFrame) -> Void) {
+    private func nextPicture(sink: (DecodedFrame) -> Void) -> PictureResult {
         var picture = Dav1dPicture()
-        while dav1d_get_picture(context, &picture) == 0 {
-            if picture.m.timestamp >= skipBefore, let frame = pixelPool.frame(from: picture) {
-                sink(frame)
-            }
-            dav1d_picture_unref(&picture)
+        let result = dav1d_get_picture(context, &picture)
+        guard result == 0 else {
+            return result == -EAGAIN ? .notReady : .failed
         }
+        if picture.m.timestamp >= skipBefore, let frame = pixelPool.frame(from: picture) {
+            sink(frame)
+        }
+        dav1d_picture_unref(&picture)
+        return .delivered
     }
 
     deinit {

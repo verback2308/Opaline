@@ -38,6 +38,9 @@ final class AV1TranscodeSession {
     private var transcodingCancel: CancelFlag?
     /// Segments worth working on: the one last asked for and the lookahead.
     private var window = 0...AV1TranscodeSession.lookahead
+    /// The chunk the player asked for last — what the cache keeps around.
+    private var playhead = AV1ChunkID(segment: 0, chunk: 0)
+    private var closed = false
 
     /// `initSource`, when the delivery already holds the init segment, saves
     /// fetching it again before the first playlist can be answered.
@@ -70,10 +73,11 @@ final class AV1TranscodeSession {
     func chunk(_ id: AV1ChunkID, completion: @escaping Completion) {
         queue.async {
             self.withTranscoder { transcoder in
-                guard transcoder != nil else {
+                guard transcoder != nil, !self.closed else {
                     completion(nil)
                     return
                 }
+                self.playhead = id
                 // A cache hit behind the window (the player re-reading
                 // what it already played) must not cancel the lookahead.
                 if self.cache[id] == nil || id.segment > self.window.lowerBound {
@@ -83,6 +87,9 @@ final class AV1TranscodeSession {
                 for ahead in 1...Self.lookahead {
                     self.prepare(id.segment + ahead)
                 }
+                // The segment may already be downloaded and held back
+                // behind a lower one that no longer matters.
+                self.pump()
             }
         }
     }
@@ -150,7 +157,7 @@ final class AV1TranscodeSession {
     /// Makes sure a segment is on its way: downloading, queued or being
     /// transcoded. A segment whose chunks are all cached needs nothing.
     private func prepare(_ segment: Int) {
-        guard plan.counts.indices.contains(segment),
+        guard !closed, plan.counts.indices.contains(segment),
               sources[segment] == nil, !fetching.contains(segment),
               transcoding?.segment != segment,
               !isCached(segment) || hasWaiters(segment) else {
@@ -164,14 +171,13 @@ final class AV1TranscodeSession {
 
     private func sourceArrived(_ segment: Int, data: Data?) {
         fetching.remove(segment)
-        guard let data else {
+        if data == nil {
             failWaiters(of: segment)
-            return
+        } else if !closed, window.contains(segment) || hasWaiters(segment) {
+            sources[segment] = data
         }
-        guard window.contains(segment) || hasWaiters(segment) else {
-            return
-        }
-        sources[segment] = data
+        // Whatever happened to this one, a segment held back behind it
+        // may be next now.
         pump()
     }
 
@@ -179,7 +185,8 @@ final class AV1TranscodeSession {
     /// waiting on first, otherwise strictly in order — when the next one in
     /// line is still downloading, it waits for it rather than skipping ahead.
     private func pump() {
-        guard transcoding == nil, let segment = nextSegment(), let source = sources[segment] else {
+        guard !closed, transcoding == nil,
+              let segment = nextSegment(), let source = sources[segment] else {
             return
         }
         sources[segment] = nil
@@ -217,7 +224,7 @@ final class AV1TranscodeSession {
     }
 
     private func deliver(_ id: AV1ChunkID, _ data: Data) {
-        cache.store(data, at: id, playhead: window.lowerBound)
+        cache.store(data, at: id, playhead: playhead)
         let pending = waiters.removeValue(forKey: id) ?? []
         pending.forEach { $0(data) }
     }
@@ -242,6 +249,23 @@ final class AV1TranscodeSession {
             failWaiters(of: segment)
         }
         pump()
+    }
+}
+
+// MARK: - Teardown
+
+extension AV1TranscodeSession {
+    /// Stops all work for good once playback has moved off this stream:
+    /// a transcode left running would keep the CPU busy for nobody.
+    func close() {
+        queue.async {
+            self.closed = true
+            self.transcodingCancel?.raise()
+            self.sources = [:]
+            let pending = self.waiters.values.flatMap { $0 }
+            self.waiters = [:]
+            pending.forEach { $0(nil) }
+        }
     }
 }
 

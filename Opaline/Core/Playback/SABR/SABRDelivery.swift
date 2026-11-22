@@ -222,11 +222,17 @@ final class SABRDelivery: StreamDelivery {
         }
     }
 
+    /// Stops what serves the current route: its fetcher and any transcoder.
+    func stopRoute() {
+        route?.fetcher.stop()
+        route?.transcode?.close()
+    }
+
     /// Playback moving elsewhere drops this delivery; the loopback server and
     /// the session have to go with it rather than linger until collection. A
     /// session left running keeps fetching the video that was closed.
     deinit {
         server?.stop()
-        route?.fetcher.stop()
+        stopRoute()
     }
 }

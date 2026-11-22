@@ -149,6 +149,10 @@ final class AV1RangeTranscoding {
         PlaybackBufferPolicy.configure(item: item)
         completion(HLSPlaybackBuilder.Result(playerItem: item, loader: result.loader))
     }
+
+    deinit {
+        session.close()
+    }
 }
 
 /// The presentation's playlists, all with URIs relative to the server. The

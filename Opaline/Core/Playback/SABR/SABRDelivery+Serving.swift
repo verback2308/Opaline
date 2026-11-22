@@ -250,7 +250,7 @@ extension SABRDelivery {
         generation += 1
         // A quality switch replaces the fetcher behind the same server; the
         // one being replaced has nobody left to serve.
-        route?.fetcher.stop()
+        stopRoute()
         route = Route(
             generation: generation,
             tracks: tracks,

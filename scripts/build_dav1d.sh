@@ -72,9 +72,9 @@ FRAMEWORK='$(SRCROOT)/Vendor/Dav1d.xcframework'
 cat > "$ROOT/Config/Dav1d.xcconfig" <<CONFIG
 // Written by scripts/build_dav1d.sh: builds with the software AV1 decoder.
 SWIFT_INCLUDE_PATHS[sdk=iphoneos*] = \$(inherited) $FRAMEWORK/ios-arm64/Headers
-SWIFT_INCLUDE_PATHS[sdk=iphonesimulator*] = \$(inherited) $FRAMEWORK/ios-arm64-simulator/Headers
+SWIFT_INCLUDE_PATHS[sdk=iphonesimulator*][arch=arm64] = \$(inherited) $FRAMEWORK/ios-arm64-simulator/Headers
 LIBRARY_SEARCH_PATHS[sdk=iphoneos*] = \$(inherited) $FRAMEWORK/ios-arm64
-LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*] = \$(inherited) $FRAMEWORK/ios-arm64-simulator
+LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*][arch=arm64] = \$(inherited) $FRAMEWORK/ios-arm64-simulator
 CONFIG
 
 LOCAL="$ROOT/Config/Local.xcconfig"

@@ -1,7 +1,8 @@
 import Foundation
 
-/// Transcoded chunks, kept within a byte budget. Over it, what lies behind
-/// the playhead goes first (oldest first), then what lies farthest ahead.
+/// Transcoded chunks, kept within a byte budget. Over it, what the player
+/// has already been given goes first (oldest first) — the lookahead is
+/// costly to make again — and only then what lies farthest ahead.
 struct AV1ChunkCache {
     let limit: Int
     private var entries: [AV1ChunkID: Data] = [:]
@@ -15,7 +16,7 @@ struct AV1ChunkCache {
         (lhs.segment, lhs.chunk) < (rhs.segment, rhs.chunk)
     }
 
-    mutating func store(_ data: Data, at id: AV1ChunkID, playhead: Int) {
+    mutating func store(_ data: Data, at id: AV1ChunkID, playhead: AV1ChunkID) {
         bytes += data.count - (entries[id]?.count ?? 0)
         entries[id] = data
         while bytes > limit, let victim = victim(sparing: id, playhead: playhead) {
@@ -23,9 +24,9 @@ struct AV1ChunkCache {
         }
     }
 
-    private func victim(sparing id: AV1ChunkID, playhead: Int) -> AV1ChunkID? {
+    private func victim(sparing id: AV1ChunkID, playhead: AV1ChunkID) -> AV1ChunkID? {
         let others = entries.keys.filter { $0 != id }
-        if let behind = others.filter({ $0.segment < playhead }).min(by: Self.precedes) {
+        if let behind = others.filter({ Self.precedes($0, playhead) }).min(by: Self.precedes) {
             return behind
         }
         return others.max(by: Self.precedes)
