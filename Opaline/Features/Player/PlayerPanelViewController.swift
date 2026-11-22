@@ -241,13 +241,13 @@ private extension PlayerPanelViewController {
         return gesture
     }
 
-    /// A downward drift of the finger during a hold-scrub (#116) is the
-    /// tail of the scrub, not a collapse — the pan must not steal it.
+    /// A downward drift of the finger during a 2x hold or a hold-scrub
+    /// (#116) is part of the hold, not a collapse — the pan must not steal it.
     func isHoldScrubbing(_ view: UIView?) -> Bool {
         var current = view
         while let candidate = current {
             if let player = candidate as? VideoPlayerView {
-                return player.holdScrub.isActive
+                return player.holdScrub.isTracking
             }
             current = candidate.superview
         }

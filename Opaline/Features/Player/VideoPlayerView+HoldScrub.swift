@@ -44,13 +44,13 @@ extension VideoPlayerView {
         taps.forEach { $0.require(toFail: hold) }
     }
 
-    /// Nothing else on the player may start mid-drag: a downward flick
-    /// that is really the tail of a scrub used to throw fullscreen away,
-    /// and a second finger used to pinch-zoom the picture being seeked.
+    /// Nothing else on the player may start while it is held (2x or a
+    /// drag): a downward flick that is really the tail of a scrub used to
+    /// throw fullscreen away, and a second finger used to pinch-zoom.
     override func gestureRecognizerShouldBegin(
         _ gestureRecognizer: UIGestureRecognizer
     ) -> Bool {
-        if holdScrub.isActive {
+        if holdScrub.isTracking {
             return false
         }
         return super.gestureRecognizerShouldBegin(gestureRecognizer)
