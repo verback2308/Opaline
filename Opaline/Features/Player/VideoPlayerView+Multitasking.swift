@@ -7,6 +7,9 @@ final class MultitaskPauseState {
     var lastUserPause: CFTimeInterval = 0
     var lastResume: CFTimeInterval = 0
     var resumeAttempts = 0
+    /// The controls came up on their own (`showControlsIfPaused`); hide them
+    /// again once playback restarts, however it does — not only on a tap.
+    var autoHideOnResume = false
 }
 
 extension VideoPlayerView {
@@ -29,9 +32,11 @@ extension VideoPlayerView {
     /// `observed` is the player the change came from, which a queued change
     /// can outlive as this view's `player` (rebuild, detach).
     func rateChanged(to rate: Float, of observed: AVPlayer) {
+        if rate > 0, multitaskPause.autoHideOnResume {
+            multitaskPause.autoHideOnResume = false
+            scheduleAutoHide()
+        }
         if rate == 0, ScreenLockPause.shared.takePause(of: observed) {
-            // A quick unlock can make the app active before this lands.
-            showControlsIfPaused()
             return
         }
         if pauseIfPlayingInBackground(rate: rate) {
@@ -116,7 +121,7 @@ extension VideoPlayerView {
               UIApplication.shared.applicationState == .active else {
             return
         }
-        hideWorkItem?.cancel()
+        multitaskPause.autoHideOnResume = true
         setControls(visible: true, animated: true)
     }
 

@@ -196,7 +196,7 @@ extension VideoPlayerView {
             }
         }
         // Back to a paused video — the lock pause, say: show the controls.
-        // A tick later, since the rate change may not have landed yet.
+        // A tick later, once a resume made on activation has landed.
         DispatchQueue.main.async { [weak self] in
             self?.showControlsIfPaused()
         }
