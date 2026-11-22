@@ -18,10 +18,26 @@ enum AV1Support {
         return VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
     }()
 
-    /// The beta setting, on a device that needs it.
+    private static let lock = NSLock()
+    private static var softwareUnavailable = false
+
+    /// The beta setting, on a device that needs it, unless a stream already
+    /// proved it cannot be transcoded here.
     static var isSoftwareEnabled: Bool {
-        !isHardwareSupported
+        lock.lock()
+        defer { lock.unlock() }
+        return !isHardwareSupported
+            && !softwareUnavailable
             && UserDefaults.standard.bool(forKey: UserDefaultsKeys.Playback.softwareAV1)
+    }
+
+    /// Steps the beta aside for the rest of the launch after a stream the
+    /// transcoder could not set up for — the next attempt then picks from
+    /// the avc1 ladder and plays, rather than failing the same way again.
+    static func markSoftwareUnavailable() {
+        lock.lock()
+        softwareUnavailable = true
+        lock.unlock()
     }
 
     /// Whether a format may be offered through the transcoder: 8-bit AV1

@@ -24,6 +24,8 @@ final class SABRDelivery: StreamDelivery {
         let format: DashFormatInfo
         let segments: [SidxSegment]
         let path: String
+        /// The init segment it was built from (ftyp, moov and sidx).
+        var initData = Data()
     }
 
     let label = "sabr"

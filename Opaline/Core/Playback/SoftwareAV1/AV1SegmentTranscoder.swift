@@ -112,15 +112,29 @@ final class AV1SegmentTranscoder {
             cutter.frames += 1
             cutter.total += 1
         }
-        for sample in samples {
-            let time = Int64(sample.decodeTime)
-            guard decoder.decode(sample.data, timestamp: time, sink: encode) else {
-                return nil
-            }
+        guard decodeAll(samples, cancel: plan.cancel, sink: encode) else {
+            _ = encoder.finishSegment()
+            return nil
         }
-        decoder.drain(sink: encode)
         flush(&cutter, index: index, onChunk: onChunk)
         return TranscodeStats(frames: cutter.total, seconds: CFAbsoluteTimeGetCurrent() - started)
+    }
+
+    /// Feeds every sample to the decoder and drains it; false when one does
+    /// not decode or the work was called off.
+    private func decodeAll(
+        _ samples: [MediaSample],
+        cancel: CancelFlag,
+        sink: (DecodedFrame) -> Void
+    ) -> Bool {
+        for sample in samples {
+            let time = Int64(sample.decodeTime)
+            guard !cancel.isRaised, decoder.decode(sample.data, timestamp: time, sink: sink) else {
+                return false
+            }
+        }
+        decoder.drain(sink: sink)
+        return true
     }
 
     /// Closes the chunk being encoded and hands it over.
@@ -129,6 +143,14 @@ final class AV1SegmentTranscoder {
             return
         }
         let encoded = encoder.finishSegment()
+        cutter.frames = 0
+        // Nothing came back — every frame was dropped. An empty fragment
+        // would be served as a playable 0-byte segment; leave the chunk
+        // undelivered so its request fails and is retried instead.
+        guard !encoded.isEmpty else {
+            AppLog.hls("av1: chunk \(index).\(cutter.current) came out empty")
+            return
+        }
         let lastDuration = encoded.last.map { cutter.duration(at: $0.timestamp) } ?? 0
         let fragment = writer.mediaSegment(
             sequence: UInt32(index * 64 + cutter.current + 1),
@@ -136,7 +158,6 @@ final class AV1SegmentTranscoder {
             lastDuration: lastDuration
         )
         onChunk(cutter.current, fragment)
-        cutter.frames = 0
     }
 }
 
@@ -176,4 +197,25 @@ private struct ChunkCutter {
 struct ChunkRequest {
     let count: Int
     let first: Int
+    /// Raised from outside when nobody needs the rest any more — a seek
+    /// away — so the work stops at the next sample instead of running out.
+    var cancel = CancelFlag()
+}
+
+/// A flag one queue raises and another polls.
+final class CancelFlag {
+    private let lock = NSLock()
+    private var raised = false
+
+    var isRaised: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return raised
+    }
+
+    func raise() {
+        lock.lock()
+        raised = true
+        lock.unlock()
+    }
 }

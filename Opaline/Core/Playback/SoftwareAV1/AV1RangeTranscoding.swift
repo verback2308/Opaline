@@ -51,20 +51,14 @@ final class AV1RangeTranscoding {
             completion(nil)
             return
         }
-        transcoding.server.start { base in
-            guard let base else {
+        // Set the transcoder up before handing out the item: a stream it
+        // cannot take fails here, where the chain can still fall back.
+        transcoding.session.codecs { codecs in
+            guard codecs != nil else {
                 completion(nil)
                 return
             }
-            result.loader.keepAlive = transcoding
-            AppLog.hls("av1: transcoding \(input.videoFormat.itag) through \(base.absoluteString)")
-            let asset = AVURLAsset(
-                url: base.appendingPathComponent("master.m3u8"),
-                options: ["AVURLAssetHTTPHeaderFieldsKey": input.headers]
-            )
-            let item = AVPlayerItem(asset: asset)
-            PlaybackBufferPolicy.configure(item: item)
-            completion(HLSPlaybackBuilder.Result(playerItem: item, loader: result.loader))
+            transcoding.start(result: result, input: input, completion: completion)
         }
     }
 
@@ -122,6 +116,28 @@ final class AV1RangeTranscoding {
             session.chunk(id, completion: respond)
         } else {
             completion(nil, "")
+        }
+    }
+
+    private func start(
+        result: HLSPlaybackBuilder.Result,
+        input: HLSPlaybackBuilder.BuildInput,
+        completion: @escaping (HLSPlaybackBuilder.Result?) -> Void
+    ) {
+        server.start { base in
+            guard let base else {
+                completion(nil)
+                return
+            }
+            result.loader.keepAlive = self
+            AppLog.hls("av1: transcoding \(input.videoFormat.itag) through \(base.absoluteString)")
+            let asset = AVURLAsset(
+                url: base.appendingPathComponent("master.m3u8"),
+                options: ["AVURLAssetHTTPHeaderFieldsKey": input.headers]
+            )
+            let item = AVPlayerItem(asset: asset)
+            PlaybackBufferPolicy.configure(item: item)
+            completion(HLSPlaybackBuilder.Result(playerItem: item, loader: result.loader))
         }
     }
 }

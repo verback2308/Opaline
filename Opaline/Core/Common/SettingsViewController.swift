@@ -1016,14 +1016,23 @@ enum VideoQualityStore {
         set { store(newValue, forKey: UserDefaultsKeys.VideoQuality.selectedCellular) }
     }
     /// Returns the maximum height for the selected quality. "Auto" caps at
-    /// 1080p — the pre-AV1 behavior; higher tiers are explicit opt-in. The
-    /// software AV1 switch is that opt-in too: with it on, Auto goes to 1440p.
+    /// 1080p — the pre-AV1 behavior; higher tiers are explicit opt-in.
     static var maxHeight: Int? {
-        let auto = AV1Support.isSoftwareEnabled ? AV1Support.softwareMaxHeight : 1_080
-        return [
+        [
             "2160p": 2_160, "1440p": 1_440, "1080p": 1_080,
             "720p": 720, "480p": 480, "360p": 360
-        ][selected] ?? auto
+        ][selected] ?? 1_080
+    }
+
+    /// The ceiling for on-demand videos. The software AV1 switch is an
+    /// opt-in too: with it on, Auto goes to 1440p — on Wi-Fi only, where its
+    /// data costs nothing. Live streams never go through the transcoder and
+    /// keep `maxHeight`.
+    static var onDemandMaxHeight: Int? {
+        guard selected == "Auto", AV1Support.isSoftwareEnabled, !NetworkType.isCellular else {
+            return maxHeight
+        }
+        return AV1Support.softwareMaxHeight
     }
 
     /// Display text for a stored value — "Auto" is a stored constant

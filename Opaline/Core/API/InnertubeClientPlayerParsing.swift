@@ -102,7 +102,7 @@ private extension InnertubeClient {
             }
         let video = selectBestVideo(
             from: adaptive,
-            maxHeight: VideoQualityStore.maxHeight
+            maxHeight: VideoQualityStore.onDemandMaxHeight
         )
         return SelectedFmts(
             progressive: progressive,

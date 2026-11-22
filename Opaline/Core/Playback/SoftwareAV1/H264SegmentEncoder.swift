@@ -23,6 +23,13 @@ final class H264SegmentEncoder {
     private let session: VTCompressionSession
     private let lock = NSLock()
     private var output: [EncodedSample] = []
+    /// What VideoToolbox is told each frame's time is. It insists on
+    /// increasing presentation times for the life of the session, and one
+    /// session serves segments in whatever order playback and seeks ask for
+    /// them — so it runs on its own clock, stepping by each frame's real
+    /// duration (rate control budgets bits per second of that clock) and by
+    /// one nominal frame across any jump. Samples keep their source time.
+    private var clock = EncoderClock()
     private(set) var parameterSets: H264ParameterSets?
 
     init?(width: Int, height: Int, bitrate: Int, fps: Int) {
@@ -81,7 +88,9 @@ final class H264SegmentEncoder {
 
     /// Submits one frame. The first frame of a segment must be a key frame.
     func encode(_ frame: DecodedFrame, timescale: Int32, keyFrame: Bool) {
-        let time = CMTime(value: frame.timestamp, timescale: timescale)
+        let tick = clock.advance(to: frame.timestamp, timescale: timescale)
+        let time = CMTime(value: tick, timescale: timescale)
+        let sourceTime = frame.timestamp
         let options = keyFrame
             ? [kVTEncodeFrameOptionKey_ForceKeyFrame: true] as CFDictionary
             : nil
@@ -94,13 +103,15 @@ final class H264SegmentEncoder {
             infoFlagsOut: nil
         ) { [weak self] status, _, sample in
             guard status == noErr, let sample else {
+                AppLog.hls("av1: encoder dropped a frame (\(status))")
                 return
             }
-            self?.collect(sample, timescale: timescale)
+            self?.collect(sample, sourceTime: sourceTime)
         }
     }
 
-    /// Waits for every submitted frame and hands them back in order.
+    /// Waits for every submitted frame and hands them back, in submission
+    /// order — frames are never reordered.
     func finishSegment() -> [EncodedSample] {
         VTCompressionSessionCompleteFrames(session, untilPresentationTimeStamp: .invalid)
         lock.lock()
@@ -108,7 +119,7 @@ final class H264SegmentEncoder {
             output = []
             lock.unlock()
         }
-        return output.sorted { $0.timestamp < $1.timestamp }
+        return output
     }
 
     private func configure(bitrate: Int, fps: Int) {
@@ -125,7 +136,7 @@ final class H264SegmentEncoder {
         }
     }
 
-    private func collect(_ sample: CMSampleBuffer, timescale: Int32) {
+    private func collect(_ sample: CMSampleBuffer, sourceTime: Int64) {
         guard let block = CMSampleBufferGetDataBuffer(sample) else {
             return
         }
@@ -136,11 +147,7 @@ final class H264SegmentEncoder {
             }
             CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: raw.count, destination: base)
         }
-        let time = CMSampleBufferGetPresentationTimeStamp(sample).convertScale(
-            timescale,
-            method: .roundHalfAwayFromZero
-        )
-        let encoded = EncodedSample(data: data, timestamp: time.value, isSync: Self.isSync(sample))
+        let encoded = EncodedSample(data: data, timestamp: sourceTime, isSync: Self.isSync(sample))
         lock.lock()
         output.append(encoded)
         if parameterSets == nil {
@@ -151,5 +158,20 @@ final class H264SegmentEncoder {
 
     deinit {
         VTCompressionSessionInvalidate(session)
+    }
+}
+
+/// A presentation clock that only moves forward (see `H264SegmentEncoder`).
+private struct EncoderClock {
+    private var now: Int64 = 0
+    private var lastSource: Int64?
+
+    mutating func advance(to source: Int64, timescale: Int32) -> Int64 {
+        let nominal = Int64(timescale) / 30
+        let step = lastSource.map { source - $0 } ?? nominal
+        // A jump — a new segment out of order, a seek — counts as one frame.
+        now += step > 0 && step < Int64(timescale) ? step : nominal
+        lastSource = source
+        return now
     }
 }

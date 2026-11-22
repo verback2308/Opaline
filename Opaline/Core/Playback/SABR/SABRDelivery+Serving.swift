@@ -75,7 +75,7 @@ extension SABRDelivery {
     }
 
     /// Main playlist pointing at the two media playlists.
-    static func mainPlaylist(route: Route, videoCodecs: String? = nil) -> String {
+    static func mainPlaylist(route: Route) -> String {
         guard route.tracks.count == 2,
               let video = route.tracks.first,
               let audio = route.tracks.last else {
@@ -85,7 +85,7 @@ extension SABRDelivery {
         let videoPeak = HLSGenerator.peakBitrate(video.segments, fallback: video.format.bitrate)
         return HLSGenerator.mainPlaylist(
             bandwidth: videoPeak + audioPeak,
-            codecs: "\(videoCodecs ?? video.format.codecs),\(audio.format.codecs)",
+            codecs: "\(video.format.codecs),\(audio.format.codecs)",
             resolution: "\(video.format.width ?? 1_280)x\(video.format.height ?? 720)",
             uris: HLSGenerator.PlaylistURIs(
                 video: "/g\(route.generation)/\(video.path).m3u8",
@@ -199,7 +199,7 @@ extension SABRDelivery {
             return nil
         }
         return [
-            Track(format: video, segments: videoSegments, path: "video"),
+            Track(format: video, segments: videoSegments, path: "video", initData: videoInit),
             Track(format: audio, segments: audioSegments, path: "audio")
         ]
     }
