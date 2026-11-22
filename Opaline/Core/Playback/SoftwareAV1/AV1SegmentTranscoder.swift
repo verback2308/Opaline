@@ -132,6 +132,7 @@ final class AV1SegmentTranscoder {
         sink: (DecodedFrame) -> Void
     ) -> Bool {
         for sample in samples {
+            AV1ForegroundGate.shared.waitForForeground(unless: cancel)
             let time = Int64(sample.decodeTime)
             guard !cancel.isRaised, decoder.decode(sample.data, timestamp: time, sink: sink) else {
                 return false

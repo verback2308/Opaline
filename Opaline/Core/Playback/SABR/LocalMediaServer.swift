@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import QuartzCore
+import UIKit
 
 /// A minimal HTTP/1.1 server on the loopback interface, used to hand SABR media
 /// to AVPlayer.
@@ -52,7 +53,11 @@ final class LocalMediaServer {
     }
 
     private static let startTimeout: TimeInterval = 5
-    private let listener: NWListener
+    /// Replaced on returning to the foreground: iOS reclaims a suspended
+    /// app's listening socket without telling the listener, and every later
+    /// request fails to connect (-1004).
+    private var listener: NWListener
+    private var foregroundObserver: NSObjectProtocol?
     private let handler: Handler
     private let queue = DispatchQueue(label: "com.ytvlite.local-media-server")
     /// Accepted connections, so stopping the server takes them down too —
@@ -70,15 +75,20 @@ final class LocalMediaServer {
     private(set) var port: UInt16?
 
     init?(handler: @escaping Handler) {
-        let parameters = NWParameters.tcp
-        // Loopback only: this must never be reachable from the network.
-        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
-        guard let listener = try? NWListener(using: parameters) else {
+        guard let listener = Self.makeListener(port: .any) else {
             AppLog.hls("local server: could not create listener")
             return nil
         }
         self.listener = listener
         self.handler = handler
+    }
+
+    /// Loopback only: this must never be reachable from the network.
+    private static func makeListener(port: NWEndpoint.Port) -> NWListener? {
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: port)
+        parameters.allowLocalEndpointReuse = true
+        return try? NWListener(using: parameters)
     }
 
     /// Starts listening and calls back with the base URL once the port is known.
@@ -91,6 +101,13 @@ final class LocalMediaServer {
             self?.accept(connection)
         }
         listener.start(queue: queue)
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.queue.async { self?.reopen() }
+        }
         // A listener that never reaches .ready would otherwise leave the caller
         // waiting forever, which reads as "quality switching does nothing"
         // rather than as a failure.
@@ -123,7 +140,29 @@ final class LocalMediaServer {
         }
     }
 
+    /// Listens again on the same port, so the URLs the player holds still
+    /// lead here. Connections that survived are left alone.
+    private func reopen() {
+        guard let port, let value = NWEndpoint.Port(rawValue: port),
+              let fresh = Self.makeListener(port: value) else {
+            return
+        }
+        listener.cancel()
+        listener = fresh
+        fresh.stateUpdateHandler = { state in
+            if case .failed(let error) = state {
+                AppLog.hls("local server: reopening :\(port) failed: \(error.localizedDescription)")
+            }
+        }
+        fresh.newConnectionHandler = { [weak self] connection in
+            self?.accept(connection)
+        }
+        fresh.start(queue: queue)
+        AppLog.hls("local server: listening again on :\(port)")
+    }
+
     func stop() {
+        foregroundObserver.map(NotificationCenter.default.removeObserver)
         listener.cancel()
         connectionsLock.lock()
         let live = connections
