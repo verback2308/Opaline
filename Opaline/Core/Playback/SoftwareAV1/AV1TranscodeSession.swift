@@ -272,7 +272,7 @@ private extension AV1TranscodeSession {
     /// The lookahead stops while what is cached ahead of the playhead fills
     /// half the cache: a segment evicted before it is played costs a stall.
     var lookaheadFull: Bool {
-        cache.bytes(after: playhead) >= Self.cacheBytes / 2
+        cache.bytes(after: playhead, through: window.upperBound) >= Self.cacheBytes / 2
     }
 
     func failWaiters(of segment: Int) {
