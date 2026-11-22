@@ -121,7 +121,11 @@ extension VideoPlayerView {
               UIApplication.shared.applicationState == .active else {
             return
         }
-        multitaskPause.autoHideOnResume = true
+        // Not while a flow that keeps the controls up is still open from
+        // before the lock — the speed overlay, a scrub, the end screen.
+        if speedOverlay.isHidden, !seekBar.isScrubbing, !isAtEnd {
+            multitaskPause.autoHideOnResume = true
+        }
         setControls(visible: true, animated: true)
     }
 
