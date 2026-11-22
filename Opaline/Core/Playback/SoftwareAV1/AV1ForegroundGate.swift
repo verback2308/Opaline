@@ -29,6 +29,14 @@ final class AV1ForegroundGate {
                 self?.set(background: false)
             }
         ]
+        // First used from a transcode thread, perhaps already in the
+        // background: take the current state from the main thread, where
+        // the notifications above also arrive, so the order holds.
+        DispatchQueue.main.async { [weak self] in
+            if UIApplication.shared.applicationState == .background {
+                self?.set(background: true)
+            }
+        }
     }
 
     /// Blocks the calling (transcode) thread while the app is in the

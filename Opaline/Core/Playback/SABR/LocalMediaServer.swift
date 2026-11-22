@@ -56,10 +56,13 @@ final class LocalMediaServer {
     /// Replaced on returning to the foreground: iOS reclaims a suspended
     /// app's listening socket without telling the listener, and every later
     /// request fails to connect (-1004).
-    private var listener: NWListener
+    /// Internal for LocalMediaServer+Foreground.swift.
+    var listener: NWListener
     private var foregroundObserver: NSObjectProtocol?
+    /// Bumped per reopen, so a retry left over from an earlier one stops.
+    var rebinds = 0
     private let handler: Handler
-    private let queue = DispatchQueue(label: "com.ytvlite.local-media-server")
+    let queue = DispatchQueue(label: "com.ytvlite.local-media-server")
     /// Accepted connections, so stopping the server takes them down too —
     /// cancelling the listener alone leaves them open for the rest of the
     /// session, one set per video watched.
@@ -84,7 +87,7 @@ final class LocalMediaServer {
     }
 
     /// Loopback only: this must never be reachable from the network.
-    private static func makeListener(port: NWEndpoint.Port) -> NWListener? {
+    static func makeListener(port: NWEndpoint.Port) -> NWListener? {
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: port)
         parameters.allowLocalEndpointReuse = true
@@ -106,7 +109,7 @@ final class LocalMediaServer {
             object: nil,
             queue: nil
         ) { [weak self] _ in
-            self?.queue.async { self?.reopen() }
+            self?.queue.async { self?.checkAfterForeground() }
         }
         // A listener that never reaches .ready would otherwise leave the caller
         // waiting forever, which reads as "quality switching does nothing"
@@ -152,7 +155,7 @@ final class LocalMediaServer {
 
     // MARK: - Connections
 
-    private func accept(_ connection: NWConnection) {
+    func accept(_ connection: NWConnection) {
         // Keep-alive means the player decides when a connection is done, so
         // its end has to be noticed and the socket released — otherwise they
         // pile up in CLOSE_WAIT for the whole session.
@@ -240,51 +243,5 @@ final class LocalMediaServer {
 
     deinit {
         stop()
-    }
-}
-
-// MARK: - Returning from the background
-
-private extension LocalMediaServer {
-    /// Listens again on the same port, so the URLs the player holds still
-    /// lead here, once the old listener has let go of it. Connections that
-    /// survived are left alone.
-    func reopen() {
-        let old = listener
-        old.stateUpdateHandler = { [weak self] state in
-            if case .cancelled = state {
-                self?.listen(again: 0)
-            }
-        }
-        old.cancel()
-    }
-
-    /// Binding can still fail for a moment after the cancel: try a few times.
-    func listen(again attempt: Int) {
-        guard let port, let value = NWEndpoint.Port(rawValue: port),
-              let fresh = Self.makeListener(port: value) else {
-            return
-        }
-        listener = fresh
-        fresh.stateUpdateHandler = { [weak self] state in
-            switch state {
-            case .ready:
-                AppLog.hls("local server: listening again on :\(port)")
-            case .failed(let error) where attempt < 5:
-                AppLog.hls("local server: rebinding :\(port) failed (\(error)), retrying")
-                fresh.cancel()
-                self?.queue.asyncAfter(deadline: .now() + 0.2 * Double(attempt + 1)) {
-                    self?.listen(again: attempt + 1)
-                }
-            case .failed(let error):
-                AppLog.hls("local server: could not listen on :\(port) again: \(error)")
-            default:
-                break
-            }
-        }
-        fresh.newConnectionHandler = { [weak self] connection in
-            self?.accept(connection)
-        }
-        fresh.start(queue: queue)
     }
 }

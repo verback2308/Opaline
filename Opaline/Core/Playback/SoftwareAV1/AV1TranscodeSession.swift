@@ -19,7 +19,6 @@ final class AV1TranscodeSession {
     private let fetchSource: SourceFetch
     private let fps: Int
     private let height: Int
-    /// State only — every hop here is short, so cache hits never wait.
     private let queue = DispatchQueue(label: "com.ytvlite.av1-session", qos: .userInitiated)
     private let work = DispatchQueue(label: "com.ytvlite.av1-transcode", qos: .userInitiated)
     private var transcoder: AV1SegmentTranscoder?
@@ -223,6 +222,7 @@ final class AV1TranscodeSession {
 
     private func deliver(_ id: AV1ChunkID, _ data: Data) {
         cache.store(data, at: id, playhead: playhead)
+        retried.remove(id.segment)
         let pending = waiters.removeValue(forKey: id) ?? []
         pending.forEach { $0(data) }
     }
@@ -239,7 +239,7 @@ final class AV1TranscodeSession {
         // Go round again for a seek back before this pass's first chunk, a dropped
         // pass wanted again, or once for frames lost (a lock). Else answer.
         let missed = waiters.keys.contains { $0.segment == segment && $0.chunk < first }
-        let retry = !cancelled && hasWaiters(segment) && retried.insert(segment).inserted
+        let retry = !missed && !cancelled && hasWaiters(segment) && retried.insert(segment).inserted
         if missed || retry || (cancelled && hasWaiters(segment)) {
             prepare(segment)
         } else {
