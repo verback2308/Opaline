@@ -103,7 +103,7 @@ final class AV1SegmentTranscoder {
             }
         }
         decoder.drain(sink: encode)
-        let encoded = encoder.finishSegment()
+        let encoded = finishEncoding(since: started)
         let output = writer.mediaSegment(
             sequence: sequence,
             samples: encoded,
@@ -111,5 +111,17 @@ final class AV1SegmentTranscoder {
         )
         let stats = TranscodeStats(frames: frames, seconds: CFAbsoluteTimeGetCurrent() - started)
         return (output, stats)
+    }
+
+    /// Waits for the encoder and logs where the segment's time went.
+    private func finishEncoding(since started: CFAbsoluteTime) -> [EncodedSample] {
+        let decoded = CFAbsoluteTimeGetCurrent()
+        let encoded = encoder.finishSegment()
+        AppLog.hls(String(
+            format: "av1 split: decode+submit %.2fs, encoder tail %.2fs",
+            decoded - started,
+            CFAbsoluteTimeGetCurrent() - decoded
+        ))
+        return encoded
     }
 }

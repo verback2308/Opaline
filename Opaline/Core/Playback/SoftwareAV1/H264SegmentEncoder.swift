@@ -113,7 +113,7 @@ final class H264SegmentEncoder {
 
     private func configure(bitrate: Int, fps: Int) {
         let properties: [CFString: Any] = [
-            kVTCompressionPropertyKey_RealTime: false,
+            kVTCompressionPropertyKey_RealTime: true,
             kVTCompressionPropertyKey_AllowFrameReordering: false,
             kVTCompressionPropertyKey_ProfileLevel: kVTProfileLevel_H264_High_AutoLevel,
             kVTCompressionPropertyKey_AverageBitRate: bitrate,
