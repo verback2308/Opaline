@@ -52,6 +52,9 @@ extension VideoPlayerView {
         if holdScrub.isActive {
             return false
         }
+        if let swipe = gestureRecognizer as? UISwipeGestureRecognizer {
+            return allowsFullscreenSwipe(swipe)
+        }
         return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
 
