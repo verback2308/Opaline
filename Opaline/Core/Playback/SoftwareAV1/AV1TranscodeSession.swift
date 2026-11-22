@@ -21,7 +21,6 @@ final class AV1TranscodeSession {
     private let height: Int
     /// State only — every hop here is short, so cache hits never wait.
     private let queue = DispatchQueue(label: "com.ytvlite.av1-session", qos: .userInitiated)
-    /// The transcodes themselves, one at a time.
     private let work = DispatchQueue(label: "com.ytvlite.av1-transcode", qos: .userInitiated)
     private var transcoder: AV1SegmentTranscoder?
     private var initSource: Data?
@@ -40,6 +39,7 @@ final class AV1TranscodeSession {
     /// The chunk the player asked for last — what the cache keeps around.
     private var playhead = AV1ChunkID(segment: 0, chunk: 0)
     private var closed = false
+    private var retried = Set<Int>()
 
     /// `initSource`, when the delivery already holds the init segment, saves
     /// fetching it again before the first playlist can be answered.
@@ -236,11 +236,11 @@ final class AV1TranscodeSession {
             let timing = String(format: "%.2fs (%.0f fps)", stats.seconds, stats.framesPerSecond)
             AppLog.hls("av1 seg \(segment): \(stats.frames) frames in \(timing)")
         }
-        // A chunk before this pass's first was asked for (a seek back), or the
-        // dropped pass is wanted again: go round again. Anything else still
-        // waiting was not produced — answer it.
+        // Go round again for a seek back before this pass's first chunk, a dropped
+        // pass wanted again, or once for frames lost (a lock). Else answer.
         let missed = waiters.keys.contains { $0.segment == segment && $0.chunk < first }
-        if missed || (cancelled && hasWaiters(segment)) {
+        let retry = !cancelled && hasWaiters(segment) && retried.insert(segment).inserted
+        if missed || retry || (cancelled && hasWaiters(segment)) {
             prepare(segment)
         } else {
             failWaiters(of: segment)

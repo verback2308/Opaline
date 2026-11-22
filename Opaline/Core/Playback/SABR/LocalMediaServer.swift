@@ -140,27 +140,6 @@ final class LocalMediaServer {
         }
     }
 
-    /// Listens again on the same port, so the URLs the player holds still
-    /// lead here. Connections that survived are left alone.
-    private func reopen() {
-        guard let port, let value = NWEndpoint.Port(rawValue: port),
-              let fresh = Self.makeListener(port: value) else {
-            return
-        }
-        listener.cancel()
-        listener = fresh
-        fresh.stateUpdateHandler = { state in
-            if case .failed(let error) = state {
-                AppLog.hls("local server: reopening :\(port) failed: \(error.localizedDescription)")
-            }
-        }
-        fresh.newConnectionHandler = { [weak self] connection in
-            self?.accept(connection)
-        }
-        fresh.start(queue: queue)
-        AppLog.hls("local server: listening again on :\(port)")
-    }
-
     func stop() {
         foregroundObserver.map(NotificationCenter.default.removeObserver)
         listener.cancel()
@@ -261,5 +240,51 @@ final class LocalMediaServer {
 
     deinit {
         stop()
+    }
+}
+
+// MARK: - Returning from the background
+
+private extension LocalMediaServer {
+    /// Listens again on the same port, so the URLs the player holds still
+    /// lead here, once the old listener has let go of it. Connections that
+    /// survived are left alone.
+    func reopen() {
+        let old = listener
+        old.stateUpdateHandler = { [weak self] state in
+            if case .cancelled = state {
+                self?.listen(again: 0)
+            }
+        }
+        old.cancel()
+    }
+
+    /// Binding can still fail for a moment after the cancel: try a few times.
+    func listen(again attempt: Int) {
+        guard let port, let value = NWEndpoint.Port(rawValue: port),
+              let fresh = Self.makeListener(port: value) else {
+            return
+        }
+        listener = fresh
+        fresh.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .ready:
+                AppLog.hls("local server: listening again on :\(port)")
+            case .failed(let error) where attempt < 5:
+                AppLog.hls("local server: rebinding :\(port) failed (\(error)), retrying")
+                fresh.cancel()
+                self?.queue.asyncAfter(deadline: .now() + 0.2 * Double(attempt + 1)) {
+                    self?.listen(again: attempt + 1)
+                }
+            case .failed(let error):
+                AppLog.hls("local server: could not listen on :\(port) again: \(error)")
+            default:
+                break
+            }
+        }
+        fresh.newConnectionHandler = { [weak self] connection in
+            self?.accept(connection)
+        }
+        fresh.start(queue: queue)
     }
 }
