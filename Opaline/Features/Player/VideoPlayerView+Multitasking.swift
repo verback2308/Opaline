@@ -26,7 +26,12 @@ extension VideoPlayerView {
 
     /// Every rate change goes through here: the background rule first, then
     /// the multitasking resume.
-    func rateChanged(to rate: Float) {
+    /// `observed` is the player the change came from, which a queued change
+    /// can outlive as this view's `player` (rebuild, detach).
+    func rateChanged(to rate: Float, of observed: AVPlayer) {
+        if rate == 0, ScreenLockPause.shared.takePause(of: observed) {
+            return
+        }
         if pauseIfPlayingInBackground(rate: rate) {
             return
         }
@@ -47,6 +52,9 @@ extension VideoPlayerView {
             return false
         }
         AppLog.player("playing in the background with background playback off, pausing")
+        // The play being undone may be the multitasking resume; left set,
+        // the flag would resume playback on the next activation.
+        multitaskPause.systemPaused = false
         player?.pause()
         return true
     }

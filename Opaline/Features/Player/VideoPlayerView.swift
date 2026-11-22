@@ -48,7 +48,7 @@ final class VideoPlayerView: UIView {
     /// needs no such flag — there is always a suggestion to play.
     var hasPreviousVideo = false
 
-    var player: AVPlayer?
+    var player: AVPlayer? { didSet { ScreenLockPause.shared.track(oldValue, player) } }
 
     // MARK: - Layers
 

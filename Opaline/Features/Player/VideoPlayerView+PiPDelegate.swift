@@ -9,6 +9,9 @@ extension VideoPlayerView: AVPictureInPictureControllerDelegate {
     ) {
         pipTrace("delegate: willStart")
         pipIsStarting = true
+        // Auto-PiP starts after `appDidEnterBackground` armed the lock pause;
+        // PiP is the user watching, so locking must not pause it.
+        ScreenLockPause.shared.arm(false)
         pipButton.setImage(
             PlayerIcons.pipExit(),
             for: .normal
@@ -57,6 +60,12 @@ extension VideoPlayerView: AVPictureInPictureControllerDelegate {
         // and only while the app is on screen: a retry from a background
         // auto-start would pop a window up on the way back instead.
         guard UIApplication.shared.applicationState == .active else {
+            // `willStart` disarmed the lock pause and the background pause
+            // skipped a starting PiP; with background playback off, a failed
+            // auto-start would otherwise leave the audio playing.
+            if !BackgroundPlaybackService.isEnabled {
+                player?.pause()
+            }
             return
         }
         startPiPWhenPossible(attempt: 50)
