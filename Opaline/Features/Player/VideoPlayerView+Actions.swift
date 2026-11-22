@@ -54,14 +54,6 @@ extension VideoPlayerView {
             delegate?.videoPlayerViewDidTapFullscreen(self)
         }
     }
-
-    @objc
-    func handleSwipeDown() {
-        guard isFullscreen else {
-            return
-        }
-        delegate?.videoPlayerViewDidTapFullscreen(self)
-    }
 }
 
 extension CGFloat {
