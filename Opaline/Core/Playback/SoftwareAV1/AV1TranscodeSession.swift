@@ -40,8 +40,7 @@ final class AV1TranscodeSession {
     private var closed = false
     private var retried = Set<Int>()
 
-    /// `initSource`, when the delivery already holds the init segment, saves
-    /// fetching it again before the first playlist can be answered.
+    /// `initSource`: the init segment, when the delivery already holds it.
     init(
         plan: AV1ChunkPlan,
         format: (height: Int, fps: Int),
@@ -222,8 +221,10 @@ final class AV1TranscodeSession {
 
     private func deliver(_ id: AV1ChunkID, _ data: Data) {
         cache.store(data, at: id, playhead: playhead)
-        retried.remove(id.segment)
         let pending = waiters.removeValue(forKey: id) ?? []
+        if !pending.isEmpty {
+            retried.remove(id.segment)
+        }
         pending.forEach { $0(data) }
     }
 
@@ -252,8 +253,7 @@ final class AV1TranscodeSession {
 // MARK: - Teardown
 
 extension AV1TranscodeSession {
-    /// Stops all work for good once playback has moved off this stream:
-    /// a transcode left running would keep the CPU busy for nobody.
+    /// Stops all work for good once playback has moved off this stream.
     func close() {
         queue.async {
             self.closed = true

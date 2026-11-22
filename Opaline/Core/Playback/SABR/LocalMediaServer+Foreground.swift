@@ -49,6 +49,7 @@ extension LocalMediaServer {
         let old = listener
         switch old.state {
         case .cancelled, .failed:
+            old.cancel()
             listen(again: 0, generation: generation)
         default:
             old.stateUpdateHandler = { [weak self] state in
@@ -63,10 +64,9 @@ extension LocalMediaServer {
     /// Binding can still fail for a moment after the cancel: try a few times.
     func listen(again attempt: Int, generation: Int) {
         guard generation == rebinds, let port, let value = NWEndpoint.Port(rawValue: port),
-              let fresh = Self.makeListener(port: value) else {
+              let fresh = Self.makeListener(port: value), adopt(fresh) else {
             return
         }
-        listener = fresh
         fresh.stateUpdateHandler = { [weak self] state in
             switch state {
             case .ready:
@@ -79,6 +79,7 @@ extension LocalMediaServer {
                 }
             case .failed(let error):
                 AppLog.hls("local server: could not listen on :\(port) again: \(error)")
+                fresh.cancel()
             default:
                 break
             }

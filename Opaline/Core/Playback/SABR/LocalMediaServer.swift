@@ -73,6 +73,8 @@ final class LocalMediaServer {
     /// happens to be running.
     private var connections: [NWConnection] = []
     private let connectionsLock = NSLock()
+    /// Set by `stop()`; a rebind still on its way then starts nothing.
+    private var stopped = false
 
     /// The port the listener settled on, once it is ready.
     private(set) var port: UInt16?
@@ -145,12 +147,26 @@ final class LocalMediaServer {
 
     func stop() {
         foregroundObserver.map(NotificationCenter.default.removeObserver)
-        listener.cancel()
         connectionsLock.lock()
+        stopped = true
+        let current = listener
         let live = connections
         connections.removeAll()
         connectionsLock.unlock()
+        current.cancel()
         live.forEach { $0.cancel() }
+    }
+
+    /// Swaps in a rebound listener — under the lock `stop()` reads it with,
+    /// since `stop()` runs off the server queue. False once stopped.
+    func adopt(_ fresh: NWListener) -> Bool {
+        connectionsLock.lock()
+        defer { connectionsLock.unlock() }
+        guard !stopped else {
+            return false
+        }
+        listener = fresh
+        return true
     }
 
     // MARK: - Connections
