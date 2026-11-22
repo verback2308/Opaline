@@ -148,7 +148,11 @@ extension WatchViewController {
               !AudioOnlyMode.isEnabled,
               let playerView = videoPlayerView,
               !playerView.isFullscreen,
-              view.window != nil else {
+              let window = view.window,
+              // A sheet opened while the video loaded (Save, Share, a "…"
+              // menu) would end up under a player moved into the window.
+              presentedViewController == nil,
+              window.rootViewController?.presentedViewController == nil else {
             return
         }
         enterFullscreen(playerView: playerView)
