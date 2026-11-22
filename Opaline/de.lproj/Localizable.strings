@@ -226,6 +226,7 @@
 "settings.row.pip" = "Bild im Bild";
 "settings.row.hideStatusBar" = "Statusleiste im Vollbild ausblenden";
 "settings.row.zoomToFill" = "Zoom zum Füllen im Vollbild";
+"settings.row.openInFullscreen" = "Videos im Vollbild öffnen";
 "settings.row.showShorts" = "Shorts anzeigen";
 "settings.row.autoplay" = "Automatische Wiedergabe";
 /* %1$@ = localized "Mix" term (player.related.mix) */

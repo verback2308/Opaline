@@ -232,6 +232,7 @@
 "settings.row.pip" = "Picture-in-Picture";
 "settings.row.hideStatusBar" = "フルスクリーンでステータスバーを隠す";
 "settings.row.zoomToFill" = "フルスクリーンでズームしてフィル";
+"settings.row.openInFullscreen" = "動画をフルスクリーンで開く";
 "settings.row.showShorts" = "ショート動画を表示";
 "settings.row.autoplay" = "自動再生";
 /* %1$@ = localized "Mix" term (player.related.mix) */

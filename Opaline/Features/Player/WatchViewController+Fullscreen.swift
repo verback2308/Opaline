@@ -111,3 +111,50 @@ extension WatchViewController {
         updateQueueBar()
     }
 }
+
+// MARK: - Open in fullscreen (iPad)
+
+extension WatchViewController {
+    static var opensVideosInFullscreen: Bool {
+        UserDefaults.standard.bool(
+            forKey: UserDefaultsKeys.Player.openInFullscreen
+        )
+    }
+
+    /// Called when the user opens a video — from a feed, a link, the related
+    /// list or the queue. Autoplay and queue advances never call it, so they
+    /// never force fullscreen. Remembered by id, so a request whose video
+    /// never got a player cannot fire on whatever plays next. iPhone is left
+    /// alone (the orientation decides there), and so are shorts, which would
+    /// fill a landscape screen with side bars.
+    func requestAutoFullscreenIfEnabled(for video: Video) {
+        let wanted = UIDevice.current.userInterfaceIdiom == .pad
+            && Self.opensVideosInFullscreen
+            && !video.isShort
+        autoFullscreenVideoId = wanted ? video.id : nil
+    }
+
+    /// Minimizing before the player arrived takes the request back.
+    func cancelAutoFullscreen() {
+        autoFullscreenVideoId = nil
+    }
+
+    /// Runs once a player is attached — the first moment there is a player
+    /// view to move into the window. Consumes the request either way.
+    func enterAutoFullscreenIfRequested() {
+        let requested = autoFullscreenVideoId
+        autoFullscreenVideoId = nil
+        guard requested == initialVideo.id,
+              !AudioOnlyMode.isEnabled,
+              let playerView = videoPlayerView,
+              !playerView.isFullscreen,
+              let window = view.window,
+              // A sheet opened while the video loaded (Save, Share, a "…"
+              // menu) would end up under a player moved into the window.
+              presentedViewController == nil,
+              window.rootViewController?.presentedViewController == nil else {
+            return
+        }
+        enterFullscreen(playerView: playerView)
+    }
+}

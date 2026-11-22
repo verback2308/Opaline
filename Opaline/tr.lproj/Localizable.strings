@@ -232,6 +232,7 @@
 "settings.row.pip" = "Picture-in-Picture";
 "settings.row.hideStatusBar" = "Tam Ekranda Durum Çubuğunu Gizle";
 "settings.row.zoomToFill" = "Tam Ekranda Doldurma İçin Yakınlaştır";
+"settings.row.openInFullscreen" = "Videoları Tam Ekranda Aç";
 "settings.row.showShorts" = "Shorts'ları göster";
 "settings.row.autoplay" = "Otomatik Oynatma";
 /* %1$@ = localized "Mix" term (player.related.mix) */

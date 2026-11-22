@@ -233,6 +233,7 @@
 "settings.row.pip" = "Картинка в картинке";
 "settings.row.hideStatusBar" = "Скрывать статус-бар в полноэкранном режиме";
 "settings.row.zoomToFill" = "Заполнять экран в полноэкранном режиме";
+"settings.row.openInFullscreen" = "Открывать видео на весь экран";
 "settings.row.showShorts" = "Показывать Shorts";
 "settings.row.shortsPlayer" = "Открывать Shorts в";
 "settings.shortsPlayer.vertical" = "Вертикальном плеере";
