@@ -12,6 +12,7 @@ struct WatchPage: Codable {
         case video, description, channelInfo, subscribeButtonText
         case isSubscribed, relatedVideos, likeCount, likeStatus
         case commentCount, nextVideo, playlistTitle, playlistVideos
+        case chapters
     }
 
     let video: Video
@@ -39,4 +40,6 @@ struct WatchPage: Codable {
     /// the coding keys deliberately: it describes how a page was delivered,
     /// not what it holds, and a stored page must decode without it.
     var servedOffline = false
+    /// Optional so pages saved before chapters existed still decode.
+    var chapters: [VideoChapter]?
 }

@@ -21,6 +21,7 @@
 "player.menu.stats" = "Meraklısına istatistikler";
 /* Picker title: subtitles */
 "player.menu.subtitles" = "Altyazılar";
+"player.menu.chapters" = "Bölümler";
 
 /* ===== Player: pickers ===== */
 

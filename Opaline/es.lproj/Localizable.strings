@@ -17,6 +17,7 @@
 "player.menu.stats" = "Estadísticas";
 /* Picker title: subtitles */
 "player.menu.subtitles" = "Subtítulos";
+"player.menu.chapters" = "Capítulos";
 
 /* ===== Player: pickers ===== */
 

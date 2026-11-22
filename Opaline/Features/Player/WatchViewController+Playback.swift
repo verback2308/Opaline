@@ -48,6 +48,7 @@ extension WatchViewController {
         )
         let pv = getOrCreatePlayerView()
         configureSponsorBlock(on: pv)
+        applyChapters()
         playerContainer.bringSubviewToFront(pv)
         pv.attach(player: player)
         // Start as soon as the first frames are decodable instead of

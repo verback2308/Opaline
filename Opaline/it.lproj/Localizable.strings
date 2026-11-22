@@ -17,6 +17,7 @@
 "player.menu.stats" = "Statistiche per nerd";
 /* Picker title: subtitles */
 "player.menu.subtitles" = "Sottotitoli";
+"player.menu.chapters" = "Capitoli";
 
 /* ===== Player: pickers ===== */
 

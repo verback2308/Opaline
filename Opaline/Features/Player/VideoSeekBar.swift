@@ -22,6 +22,8 @@ final class VideoSeekBar: UIControl {
     /// them every tick meant creating and destroying a UIView per segment
     /// forever, even with the controls overlay hidden.
     private var segmentsLayoutWidth: CGFloat = -1
+    let chapterGapsView = UIView()
+    var chapterMarks: [Double] = [], chapterMarksLayoutWidth: CGFloat = -1
     private var bufferWidthConstraint: NSLayoutConstraint?
     private var progressWidthConstraint: NSLayoutConstraint?
 
@@ -66,6 +68,7 @@ final class VideoSeekBar: UIControl {
             y: bounds.height / 2
         )
         layoutSegmentViews()
+        layoutChapterGaps()
     }
 
     func setProgress(_ value: Double) {
@@ -152,6 +155,7 @@ final class VideoSeekBar: UIControl {
         thumbView.layer.cornerRadius = 6
         thumbView.frame = CGRect(x: 0, y: 0, width: 12, height: 12)
         thumbView.isHidden = true
+        configureChapterGaps()
     }
 
     private func addTrackSubviews() {
@@ -159,6 +163,7 @@ final class VideoSeekBar: UIControl {
         addSubview(bufferView)
         addSubview(segmentsView)
         addSubview(progressView)
+        addSubview(chapterGapsView)
         addSubview(thumbView)
     }
 

@@ -168,6 +168,8 @@ final class VideoPlayerView: UIView {
 
     var subtitleCues: [SubtitleCue] = []
     var onCCTapped: (() -> Void)?
+    var chapters: [VideoChapter] = [], onChaptersTapped: (() -> Void)?
+    let chapterButton = UIButton(type: .system)
 
     // MARK: - Playback Speed
 

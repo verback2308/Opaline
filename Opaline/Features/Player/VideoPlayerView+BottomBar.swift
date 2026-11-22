@@ -11,6 +11,7 @@ extension VideoPlayerView {
         setupFullscreenButton()
         addBottomBarSubviews()
         activateBottomBarConstraints()
+        setupChapterButton()
     }
 
     private func setupTimeLabels() {
@@ -58,9 +59,9 @@ extension VideoPlayerView {
             guard let self else {
                 return
             }
-            self.currentTimeLabel.text = formatTime(
-                progress * self.duration
-            )
+            let seconds = progress * self.duration
+            self.currentTimeLabel.text = formatTime(seconds)
+            self.updateChapterTitle(at: seconds)
         }
     }
 

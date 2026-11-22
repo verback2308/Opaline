@@ -21,6 +21,7 @@
 "player.menu.stats" = "详细统计信息";
 /* Picker title: subtitles */
 "player.menu.subtitles" = "字幕";
+"player.menu.chapters" = "章节";
 
 /* ===== Player: pickers ===== */
 
