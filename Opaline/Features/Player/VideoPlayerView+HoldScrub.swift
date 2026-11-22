@@ -15,9 +15,10 @@ final class HoldScrubState {
 /// bar is never touched, so lifting the finger cannot seek.
 private let holdScrubThreshold: CGFloat = 8
 
-/// Press and hold anywhere on the picture, then drag sideways to scrub
-/// (#116). The seek bar is a thin target and the finger covers the video
-/// while dragging it, so the whole surface acts as the track.
+/// Press and hold anywhere on the picture to play at 2x while the finger
+/// stays down (#149), or drag sideways to scrub instead (#116). The seek
+/// bar is a thin target and the finger covers the video while dragging it,
+/// so the whole surface acts as the track.
 ///
 /// The gesture does not seek by itself: it drives the seek bar through the
 /// same three steps a finger on the track does, so the thumb, the time
@@ -43,13 +44,13 @@ extension VideoPlayerView {
         taps.forEach { $0.require(toFail: hold) }
     }
 
-    /// Nothing else on the player may start mid-drag: a downward flick
-    /// that is really the tail of a scrub used to throw fullscreen away,
-    /// and a second finger used to pinch-zoom the picture being seeked.
+    /// Nothing else on the player may start while it is held (2x or a
+    /// drag): a downward flick that is really the tail of a scrub used to
+    /// throw fullscreen away, and a second finger used to pinch-zoom.
     override func gestureRecognizerShouldBegin(
         _ gestureRecognizer: UIGestureRecognizer
     ) -> Bool {
-        if holdScrub.isActive {
+        if holdScrub.isTracking {
             return false
         }
         return super.gestureRecognizerShouldBegin(gestureRecognizer)
@@ -84,37 +85,67 @@ extension VideoPlayerView {
         holdScrub.isTracking = true
         holdScrub.startX = xPosition
         holdScrub.startProgress = CMTimeGetSeconds(time) / duration
-        // The bar and the time label are the readout for this drag, so
-        // they have to be up even when the press landed on bare picture.
-        if !controlsVisible {
-            setControls(visible: true, animated: true)
-        }
+        startSpeedBoost()
     }
 
     private func updateHoldScrub(atX xPosition: CGFloat) {
         guard holdScrub.isTracking, bounds.width > 0 else {
             return
         }
-        let travel = xPosition - holdScrub.startX
         if !holdScrub.isActive {
-            guard abs(travel) >= holdScrubThreshold else {
+            guard abs(xPosition - holdScrub.startX) >= holdScrubThreshold else {
                 return
             }
-            holdScrub.isActive = true
-            seekBar.beginExternalScrub()
+            beginDragScrub(atX: xPosition)
         }
         seekBar.updateExternalScrub(
             to: holdScrub.startProgress
-                + Double(travel / bounds.width)
+                + Double((xPosition - holdScrub.startX) / bounds.width)
         )
     }
 
     private func endHoldScrub() {
         holdScrub.isTracking = false
+        stopSpeedBoost()
         guard holdScrub.isActive else {
             return
         }
         holdScrub.isActive = false
         seekBar.endExternalScrub()
+    }
+}
+
+// MARK: - Hold for 2x
+
+extension VideoPlayerView {
+    /// A drag is a scrub, not a fast-forward: back to the chosen speed, the
+    /// bar and time label up as the readout, and measured from where
+    /// playback is now — a 2x hold has moved it on since the press landed.
+    private func beginDragScrub(atX xPosition: CGFloat) {
+        holdScrub.isActive = true
+        stopSpeedBoost()
+        if let time = player?.currentTime(), duration > 0 {
+            holdScrub.startProgress = CMTimeGetSeconds(time) / duration
+        }
+        holdScrub.startX = xPosition
+        if !controlsVisible {
+            setControls(visible: true, animated: true)
+        }
+        seekBar.beginExternalScrub()
+    }
+
+    /// Only a playing video speeds up: a press on a paused one is the start
+    /// of a scrub, and starting playback from a hold would surprise.
+    private func startSpeedBoost() {
+        guard let player else {
+            return
+        }
+        speedBoost.badge.install(in: self)
+        _ = speedBoost.begin(player, rate: max(playbackSpeed, SpeedBoostBadge.boostedRate))
+    }
+
+    /// Back to the speed the user picked.
+    private func stopSpeedBoost() {
+        speedBoost.end(player, restoring: playbackSpeed)
     }
 }
