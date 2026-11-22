@@ -20,6 +20,7 @@
 "player.queue.upNext" = "Video tiếp theo: %1$@";
 "player.menu.stats" = "Thống kê chi tiết";
 "player.menu.subtitles" = "Phụ đề";
+"player.menu.chapters" = "Chương";
 
 /* ===== Player: pickers ===== */
 

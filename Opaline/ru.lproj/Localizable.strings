@@ -19,6 +19,7 @@
 "player.queue.upNext" = "Далее: %1$@";
 "player.menu.stats" = "Подробная статистика";
 "player.menu.subtitles" = "Субтитры";
+"player.menu.chapters" = "Разделы";
 
 /* ===== Player: pickers ===== */
 

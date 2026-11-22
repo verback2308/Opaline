@@ -5,9 +5,7 @@ extension InnertubeClient {
         _ json: [String: Any],
         fallbackVideo fb: Video
     ) -> WatchPage? {
-        let ch = parseWatchChannelInfo(
-            json, fallbackVideo: fb
-        )
+        let ch = parseWatchChannelInfo(json, fallbackVideo: fb)
         let sub = parseSubscribeState(json)
         let likeInfo = parseWatchLikeInfo(json)
         // A queue exists only where the watch request carried a playlistId
@@ -19,7 +17,7 @@ extension InnertubeClient {
             json: json,
             currentVideoId: fb.id
         )
-        return WatchPage(
+        var page = WatchPage(
             video: resolvedVideo(
                 fb, from: json, channel: ch
             ),
@@ -40,6 +38,8 @@ extension InnertubeClient {
             queueContinuation: pivot?.continuation,
             shuffleParams: pivot?.shuffleParams
         )
+        page.chapters = parseChapters(json)
+        return page
     }
 
     /// The comments engagement panel's header carries the total. Both the

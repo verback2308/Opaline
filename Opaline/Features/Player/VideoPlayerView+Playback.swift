@@ -239,7 +239,7 @@ extension VideoPlayerView {
                     self?.durationLabel.text = formatTime(
                         secs
                     )
-                    self?.refreshSponsorSeekBar()
+                    self?.refreshSeekBarMarks()
                 }
             }
         }
@@ -275,7 +275,7 @@ extension VideoPlayerView {
             if currentTimeLabel.text != stamp {
                 currentTimeLabel.text = stamp
             }
-            seekBar.setProgress(secs / duration)
+            setSeekBarProgress(seconds: secs)
             updateBuffer(at: time)
         }
         onTimeUpdate?(secs)

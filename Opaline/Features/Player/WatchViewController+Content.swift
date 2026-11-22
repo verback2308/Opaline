@@ -123,6 +123,7 @@ extension WatchViewController {
         applyEngagementData(from: page)
         applyTheme()
         applyRelatedVideos(from: page)
+        applyChapters()
         updateTransportAvailability()
         startSideEffects(for: page.video.id)
         view.setNeedsLayout()
@@ -431,6 +432,7 @@ extension WatchViewController {
         // Loop is a property of the video you turned it on for.
         videoPlayerView?.isLooping = false
         watchPage = nil
+        applyChapters()
         isLoadingRelated = true
         allRelatedVideos = []
         visibleRelatedVideos = []
