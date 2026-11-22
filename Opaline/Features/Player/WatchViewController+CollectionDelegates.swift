@@ -109,7 +109,7 @@ extension WatchViewController: UICollectionViewDelegate {
         guard let video = relatedVideo(at: indexPath) else {
             return
         }
-        requestAutoFullscreenIfEnabled()
+        requestAutoFullscreenIfEnabled(for: video)
         navigateTo(video)
     }
 }

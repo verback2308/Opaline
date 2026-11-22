@@ -185,8 +185,8 @@ final class WatchViewController: UIViewController {
     var fullscreenSnapshot: FullscreenSnapshot?
     /// True from the moment the exit animation starts until the player is back
     /// in place — the status bar follows this, not the player's own state.
-    /// `wantsAutoFullscreen`: see `requestAutoFullscreenIfEnabled`.
-    var isLeavingFullscreen = false, wantsAutoFullscreen = false
+    /// `autoFullscreenVideoId`: see `requestAutoFullscreenIfEnabled(for:)`.
+    var isLeavingFullscreen = false, autoFullscreenVideoId: String?
     var channelTopToMeta, channelTopToDesc: NSLayoutConstraint?
     /// Pins the interface while a fullscreen toggle rotates it against the way
     /// the device is physically held; cleared once the two agree again. `Held`

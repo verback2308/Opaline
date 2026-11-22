@@ -122,25 +122,33 @@ extension WatchViewController {
     }
 
     /// Called when the user opens a video — from a feed, a link, the related
-    /// list or the queue; the next player attach consumes
-    /// it. Autoplay and queue advances load videos without it, so they never
-    /// force fullscreen. iPhone is left alone: there the orientation, not a
-    /// setting, decides fullscreen.
-    func requestAutoFullscreenIfEnabled() {
-        wantsAutoFullscreen = UIDevice.current.userInterfaceIdiom == .pad
+    /// list or the queue. Autoplay and queue advances never call it, so they
+    /// never force fullscreen. Remembered by id, so a request whose video
+    /// never got a player cannot fire on whatever plays next. iPhone is left
+    /// alone (the orientation decides there), and so are shorts, which would
+    /// fill a landscape screen with side bars.
+    func requestAutoFullscreenIfEnabled(for video: Video) {
+        let wanted = UIDevice.current.userInterfaceIdiom == .pad
             && Self.opensVideosInFullscreen
+            && !video.isShort
+        autoFullscreenVideoId = wanted ? video.id : nil
+    }
+
+    /// Minimizing before the player arrived takes the request back.
+    func cancelAutoFullscreen() {
+        autoFullscreenVideoId = nil
     }
 
     /// Runs once a player is attached — the first moment there is a player
-    /// view to move into the window.
+    /// view to move into the window. Consumes the request either way.
     func enterAutoFullscreenIfRequested() {
-        guard wantsAutoFullscreen,
+        let requested = autoFullscreenVideoId
+        autoFullscreenVideoId = nil
+        guard requested == initialVideo.id,
+              !AudioOnlyMode.isEnabled,
               let playerView = videoPlayerView,
+              !playerView.isFullscreen,
               view.window != nil else {
-            return
-        }
-        wantsAutoFullscreen = false
-        guard !playerView.isFullscreen else {
             return
         }
         enterFullscreen(playerView: playerView)

@@ -94,7 +94,7 @@ extension WatchViewController {
         makeSheetDraggable(panel.sheet)
         panel.applyTheme(ThemeManager.shared)
         panel.onSelect = { [weak self] video in
-            self?.requestAutoFullscreenIfEnabled()
+            self?.requestAutoFullscreenIfEnabled(for: video)
             self?.navigateTo(video)
         }
         panel.onShuffle = { [weak self] in
