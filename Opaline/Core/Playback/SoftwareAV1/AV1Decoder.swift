@@ -1,6 +1,8 @@
 import CoreVideo
-import Dav1d
 import Foundation
+#if canImport(Dav1d)
+import Dav1d
+#endif
 
 /// A decoded picture and the decode time of the sample it came from.
 struct DecodedFrame {
@@ -8,6 +10,7 @@ struct DecodedFrame {
     let timestamp: Int64
 }
 
+#if canImport(Dav1d)
 /// dav1d behind a minimal push/pull interface. Pictures come out as NV12
 /// `CVPixelBuffer`s, the layout VideoToolbox's encoder takes without a copy
 /// of its own. Only 8-bit 4:2:0 is supported — what YouTube's SDR AV1 is.
@@ -74,3 +77,22 @@ final class AV1Decoder {
         dav1d_close(&context)
     }
 }
+#else
+/// Builds without dav1d (see scripts/build_dav1d.sh) have no software
+/// decoder; `AV1Support` keeps the beta hidden there, so this never runs.
+final class AV1Decoder {
+    var skipBefore = Int64.min
+
+    init?(width: Int, height: Int, threads: Int) {
+        nil
+    }
+
+    func reset() {}
+
+    func decode(_ bytes: Data, timestamp: Int64, sink: (DecodedFrame) -> Void) -> Bool {
+        false
+    }
+
+    func drain(sink: (DecodedFrame) -> Void) {}
+}
+#endif

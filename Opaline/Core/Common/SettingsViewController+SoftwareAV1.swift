@@ -4,9 +4,10 @@ import UIKit
 
 extension SettingsViewController {
     /// The quality rows, plus the software AV1 switch on devices that have no
-    /// AV1 hardware — the only ones it means anything on.
+    /// AV1 hardware — the only ones it means anything on — when the build
+    /// includes the decoder.
     var qualitySection: Section {
-        guard !AV1Support.isHardwareSupported else {
+        guard AV1Support.isSoftwareAvailable else {
             return Section(
                 header: "settings.section.videoQuality".localized,
                 footer: nil,

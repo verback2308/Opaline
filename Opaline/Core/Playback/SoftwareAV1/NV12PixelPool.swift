@@ -1,7 +1,9 @@
 import Accelerate
 import CoreVideo
-import Dav1d
 import Foundation
+#if canImport(Dav1d)
+import Dav1d
+#endif
 
 /// Converts dav1d's planar I420 pictures into IOSurface-backed NV12 pixel
 /// buffers from a pool, so the encoder can read them without another copy.
@@ -24,6 +26,7 @@ final class NV12PixelPool {
         pool = created
     }
 
+    #if canImport(Dav1d)
     func frame(from picture: Dav1dPicture) -> DecodedFrame? {
         guard picture.p.layout == DAV1D_PIXEL_LAYOUT_I420, picture.p.bpc == 8,
               let planeY = picture.data.0, let planeU = picture.data.1,
@@ -45,6 +48,7 @@ final class NV12PixelPool {
         CVPixelBufferUnlockBaseAddress(output, [])
         return DecodedFrame(pixelBuffer: output, timestamp: picture.m.timestamp)
     }
+    #endif
 
     func makeBuffer() -> CVPixelBuffer? {
         var output: CVPixelBuffer?

@@ -18,6 +18,16 @@ enum AV1Support {
         return VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
     }()
 
+    /// Software decode needs dav1d, which the default build leaves out to
+    /// stay dependency-free; `scripts/build_dav1d.sh` adds it.
+    static let isSoftwareAvailable: Bool = {
+        #if canImport(Dav1d)
+        return !isHardwareSupported
+        #else
+        return false
+        #endif
+    }()
+
     private static let lock = NSLock()
     /// Format shapes ("1440x60") the transcoder could not set up for.
     private static var failedShapes = Set<String>()
@@ -27,9 +37,9 @@ enum AV1Support {
         UserDefaults.standard.bool(forKey: UserDefaultsKeys.Playback.softwareAV1)
     }
 
-    /// The beta setting, on a device that needs it.
+    /// The beta setting, on a device that needs it, in a build that has it.
     static var isSoftwareEnabled: Bool {
-        !isHardwareSupported && isSoftwarePreferred
+        isSoftwareAvailable && isSoftwarePreferred
     }
 
     /// Takes a format shape out of the beta for the rest of the launch after

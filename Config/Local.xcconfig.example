@@ -13,3 +13,6 @@
 PRODUCT_BUNDLE_IDENTIFIER = com.example.YourApp
 DEVELOPMENT_TEAM =
 APP_MANIFEST_URL = https:/$()/raw.githubusercontent.com/verback2308/ytlite/main/source/apps.json
+
+// Present only after scripts/build_dav1d.sh: the optional software AV1 decoder.
+#include? "Dav1d.xcconfig"
