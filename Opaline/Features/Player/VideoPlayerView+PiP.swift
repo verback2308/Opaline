@@ -135,6 +135,9 @@ extension VideoPlayerView {
     @objc
     func appDidEnterBackground() {
         guard BackgroundPlaybackService.isEnabled else {
+            // Locking the screen holds the main thread before any pause from
+            // here could run — see ScreenLockPause.
+            ScreenLockPause.shared.arm(!isPiPActive)
             return
         }
         DispatchQueue.main.async { [weak self] in
@@ -176,6 +179,7 @@ extension VideoPlayerView {
 
     @objc
     func appDidBecomeActive() {
+        ScreenLockPause.shared.arm(false)
         guard let player else {
             return
         }
@@ -190,6 +194,11 @@ extension VideoPlayerView {
             if player.rate == 0 {
                 player.play()
             }
+        }
+        // Back to a paused video — the lock pause, say: show the controls.
+        // A tick later, once a resume made on activation has landed.
+        DispatchQueue.main.async { [weak self] in
+            self?.showControlsIfPaused()
         }
         // Re-evaluate the PiP setting (it may have changed in Settings).
         setupPiP()
