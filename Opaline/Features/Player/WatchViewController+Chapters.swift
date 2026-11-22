@@ -42,6 +42,9 @@ extension WatchViewController {
     /// To the exact start: rounding down to the second can land just inside
     /// the chapter before, which would then show as the current one.
     private func seekToChapter(_ chapter: VideoChapter) {
+        // Picked from the end screen the player stays paused, so the rate
+        // observer would not clear it and Replay would jump back to 0:00.
+        videoPlayerView?.isAtEnd = false
         videoPlayerView?.player?.seek(
             to: CMTime(seconds: chapter.start, preferredTimescale: 600),
             toleranceBefore: .zero,
