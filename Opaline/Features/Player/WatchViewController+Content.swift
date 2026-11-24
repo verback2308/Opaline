@@ -428,6 +428,7 @@ extension WatchViewController {
     }
 
     func resetVideoState() {
+        recoveryStartedAt = nil
         // Loop is a property of the video you turned it on for.
         videoPlayerView?.isLooping = false
         watchPage = nil

@@ -10,18 +10,6 @@ extension WatchViewController {
         else {
             return
         }
-        // Paused, in the background, background playback off: nobody is
-        // listening, and a stream rebuilt during a background wake-up would
-        // only fail again once iOS suspends the app, loopback server and all.
-        // Rebuild on return. A Play from the lock screen still recovers now.
-        if UIApplication.shared.applicationState == .background,
-           !BackgroundPlaybackService.isEnabled,
-           videoPlayerView?.isPiPActive != true,
-           videoPlayerView?.player?.rate == 0 {
-            AppLog.player("recoverPlayback: in the background, deferred to foreground")
-            recoverOnForeground = true
-            return
-        }
         AppLog.player(
             "recoverPlayback: resumeAt=\(lastPlaybackPosition)s"
         )
@@ -32,7 +20,7 @@ extension WatchViewController {
             return
         }
         isRecoveringPlayback = true
-        recoveryItem = videoPlayerView?.player?.currentItem
+        recoveryStartedAt = Date()
         hasSeenPlaybackError = false
         pendingRecoverySeek = true
     }
@@ -44,7 +32,7 @@ extension WatchViewController {
             return false
         }
         isRecoveringPlayback = false
-        recoveryItem = nil
+        recoveryStartedAt = nil
         let target = lastPlaybackPosition
         // A rebuilt stream that already opens at the playhead is where it
         // needs to be. Seeking there anyway leaves the player working the head

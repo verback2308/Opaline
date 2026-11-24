@@ -201,6 +201,17 @@ extension WatchViewController {
     func playerItemNewErrorLogEntry(
         _ note: Notification
     ) {
+        // Not promised on the main thread either.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleErrorLogEntry(note)
+            }
+            return
+        }
+        handleErrorLogEntry(note)
+    }
+
+    private func handleErrorLogEntry(_ note: Notification) {
         guard let item =
             note.object as? AVPlayerItem,
             let events = item.errorLog()?.events,
