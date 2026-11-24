@@ -1,13 +1,5 @@
 import UIKit
 
-struct WatchProgress {
-    let fraction: Double
-
-    var shouldShow: Bool {
-        fraction > 0.03
-    }
-}
-
 /// Stores per-video watch progress. Written both by this device
 /// while playing (`setLocalFraction`) and by the server —
 /// WatchProgressSyncService plus inline extraction from
@@ -125,7 +117,11 @@ final class WatchProgressStore {
             merged[videoId] = fraction
         }
         fractions = merged
-        localIds = localIds.filter { merged[$0.key] != nil }
+        // Kept only while the server has no position (or ours is fresher).
+        localIds = localIds.filter {
+            merged[$0.key] != nil
+                && (entries[$0.key] == nil || isLocallyFreshLocked($0.key))
+        }
         trimLocked()
         lock.unlock()
         persistQueue.async {
@@ -209,13 +205,18 @@ final class WatchProgressStore {
         return Date().timeIntervalSince1970 - at < serverGrace
     }
 
-    /// Caps the table and drops local stamps that have aged out of
-    /// the grace window. Over the cap, entries only the server knows
-    /// go first, then this device's oldest — never `kept`, the one
-    /// just written. Call with `lock` held.
+    /// Caps the table and drops aged-out local stamps. Over the cap,
+    /// server-only entries go first, then this device's oldest, never
+    /// `kept` (just written). Call with `lock` held.
     private func trimLocked(keeping kept: String? = nil) {
         let cutoff = Date().timeIntervalSince1970 - serverGrace
         localTimes = localTimes.filter { $0.value >= cutoff }
+        // At most half the table, so other devices' positions stay.
+        let overKept = localIds.count - maxEntries / 2
+        if overKept > 0 {
+            let oldest = localIds.sorted { $0.value < $1.value }.map(\.key).filter { $0 != kept }
+            oldest.prefix(overKept).forEach { localIds.removeValue(forKey: $0) }
+        }
         guard fractions.count > maxEntries else {
             return
         }
@@ -245,9 +246,7 @@ extension WatchProgressStore {
         ) as? [String: Double] {
             localTimes = times
         }
-        if let ids = defaults.dictionary(
-            forKey: localIdsKey
-        ) as? [String: Double] {
+        if let ids = defaults.dictionary(forKey: localIdsKey) as? [String: Double] {
             localIds = ids
         }
     }
