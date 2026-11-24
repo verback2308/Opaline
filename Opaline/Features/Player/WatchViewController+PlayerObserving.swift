@@ -80,6 +80,9 @@ extension WatchViewController {
 
     func logReadyToPlay(_ item: AVPlayerItem) {
         if applyRecoverySeekIfNeeded(item) {
+            // The rebuilt player needs its lock-screen controls back: the
+            // attach ended the old Now Playing session.
+            beginNowPlayingSession(duration: CMTimeGetSeconds(item.duration))
             return
         }
         // Not an early return: a switched stream still needs its Now Playing
@@ -145,8 +148,13 @@ extension WatchViewController {
                 + " code=\(code)"
         )
         logUnderlyingError(nsError)
+        if recoverIfOwnItemFailed(item) {
+            return
+        }
+        // -1004/-1005 here are the loopback server, gone with a suspension.
+        let loopbackLost = domain == NSURLErrorDomain && [-1_004, -1_005].contains(code)
         if code == -12_660
-            || domain == "CoreMediaErrorDomain" {
+            || domain == "CoreMediaErrorDomain" || loopbackLost {
             hasSeenPlaybackError = true
             if !isRecoveringPlayback {
                 AppLog.player(
@@ -176,6 +184,13 @@ extension WatchViewController {
     func playerItemDidFailToPlayToEnd(
         _ note: Notification
     ) {
+        // AVFoundation may post this off the main thread.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.playerItemDidFailToPlayToEnd(note)
+            }
+            return
+        }
         let errorKey =
             AVPlayerItemFailedToPlayToEndTimeErrorKey
         let error =
@@ -184,6 +199,14 @@ extension WatchViewController {
         AppLog.player(
             "player item failed to end: \(error)"
         )
+        let item = note.object as? AVPlayerItem
+        // A failure of an item already replaced is not this one's.
+        guard item === videoPlayerView?.player?.currentItem else {
+            return
+        }
+        if recoverIfOwnItemFailed(item) {
+            return
+        }
         hasSeenPlaybackError = true
         if !isRecoveringPlayback {
             recoverPlayback()
@@ -194,6 +217,17 @@ extension WatchViewController {
     func playerItemNewErrorLogEntry(
         _ note: Notification
     ) {
+        // Not promised on the main thread either.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleErrorLogEntry(note)
+            }
+            return
+        }
+        handleErrorLogEntry(note)
+    }
+
+    private func handleErrorLogEntry(_ note: Notification) {
         guard let item =
             note.object as? AVPlayerItem,
             let events = item.errorLog()?.events,
@@ -214,7 +248,7 @@ extension WatchViewController {
                 + " comment=\(comment),"
                 + " uri=\(uri)"
         )
-        if last.errorStatusCode == 403 {
+        if last.errorStatusCode == 403, item === videoPlayerView?.player?.currentItem {
             hasSeenPlaybackError = true
             if !isRecoveringPlayback {
                 AppLog.player(

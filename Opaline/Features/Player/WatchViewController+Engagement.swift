@@ -33,12 +33,26 @@ extension WatchViewController {
             Date().timeIntervalSince($0)
         } ?? 0
         backgroundEnteredAt = nil
+        // A failed item never plays again by itself, and a recovery begun
+        // during a background wake-up can stall with the app suspended under
+        // it: either left a black screen and a spinner. A recovery under a
+        // minute old is still resolving and left to finish.
+        let failed = videoPlayerView?.player?.currentItem?.status == .failed
+        let resolving = isRecoveringPlayback && recovery.isFresh
+        if !resolving, failed || isRecoveringPlayback {
+            isRecoveringPlayback = false
+            AppLog.player("foreground: playback failed or stalled in the background, recovering")
+            // The user is only now back: rebuild it paused, not with sound.
+            recoverPlayback(resume: false)
+            return
+        }
         if elapsed > 120, hasSeenPlaybackError {
             AppLog.player(
                 "foreground: URLs likely expired"
                     + " (\(Int(elapsed))s in bg), recovering"
             )
-            recoverPlayback()
+            // Play on only if it was playing (background playback on).
+            recoverPlayback(resume: (videoPlayerView?.player?.rate ?? 0) > 0)
         }
     }
 

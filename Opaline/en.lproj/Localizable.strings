@@ -330,6 +330,8 @@
 "settings.row.pip" = "Picture-in-Picture";
 "settings.row.hideStatusBar" = "Hide Status Bar in Fullscreen";
 "settings.row.zoomToFill" = "Zoom to Fill in Fullscreen";
+"settings.row.softwareAV1" = "1440p via Software AV1 (Beta)";
+"settings.footer.softwareAV1" = "Adds 1440p on devices without hardware AV1: the video is decoded on the CPU and re-encoded to H.264 for the player. Auto then plays 1440p where a video has it. Uses more battery and warms the device.";
 "settings.row.showShorts" = "Show Shorts";
 "settings.row.shortsPlayer" = "Open Shorts in";
 "settings.shortsPlayer.vertical" = "Vertical player";

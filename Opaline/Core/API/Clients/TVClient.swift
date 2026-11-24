@@ -38,7 +38,7 @@ struct TVClient: PlaybackClient {
     /// 1080, and claiming less would ask the server to withhold formats we can
     /// play — so the setting only ever raises the ceiling.
     private static func decodeCeiling() -> Int {
-        max(1_080, VideoQualityStore.maxHeight ?? 1_080)
+        max(1_080, VideoQualityStore.onDemandMaxHeight ?? 1_080)
     }
 
     /// What the set can decode — the shape a television sends, with our own

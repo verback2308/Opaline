@@ -46,7 +46,17 @@ enum HLSPlaybackBuilder {
                     audioData: audioData,
                     startTime: startTime
                 )
-                completion(result)
+                guard let result, AV1Support.needsTranscode(input.videoFormat),
+                      let segments = videoData.flatMap(HLSGenerator.parseSidx) else {
+                    completion(result)
+                    return
+                }
+                AV1RangeTranscoding.attach(
+                    to: result,
+                    input: input,
+                    segments: segments,
+                    completion: completion
+                )
             }
         }
     }

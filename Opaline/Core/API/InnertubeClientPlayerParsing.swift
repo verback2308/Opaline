@@ -102,7 +102,7 @@ private extension InnertubeClient {
             }
         let video = selectBestVideo(
             from: adaptive,
-            maxHeight: VideoQualityStore.maxHeight
+            maxHeight: VideoQualityStore.onDemandMaxHeight
         )
         return SelectedFmts(
             progressive: progressive,
@@ -141,7 +141,8 @@ private extension InnertubeClient {
     }
 
     /// avc1 everywhere; av01 additionally on hardware-AV1 devices (the only
-    /// codecs above 1080p are VP9/AV1, and VP9 is undecodable by AVPlayer).
+    /// codecs above 1080p are VP9/AV1, and VP9 is undecodable by AVPlayer),
+    /// and above 1080p through the software transcoder when it is on.
     static func fmtIsPlayableVideo(
         _ fmt: [String: Any]
     ) -> Bool {
@@ -152,6 +153,11 @@ private extension InnertubeClient {
         return mime.contains("avc1")
             || (AV1Support.isHardwareSupported
                 && mime.contains("av01"))
+            || AV1Support.isSoftwarePlayable(
+                mime: mime,
+                height: fmtHeight(fmt),
+                fps: fmt["fps"] as? Int ?? 30
+            )
     }
 
     static func selectBestVideo(

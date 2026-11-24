@@ -18,7 +18,7 @@ enum InnertubeContexts {
     static var tv: [String: Any] { localized(tvTemplate) }
     static var mweb: [String: Any] { localized(mwebTemplate) }
     static var android: [String: Any] { localized(androidTemplate) }
-    static var visionOS: [String: Any] { localized(visionOSTemplate) }
+    static var visionOS: [String: Any] { VisionOSDevice.apply(to: localized(visionOSTemplate)) }
     static var ios: [String: Any] { localized(iosTemplate) }
 
     private static let webTemplate: [String: Any] = [

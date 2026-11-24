@@ -71,6 +71,15 @@ jobs:
           fi
           cat Config/Local.xcconfig
 
+      # The software AV1 decoder (the "1440p via Software AV1" beta) is not
+      # in the repository: build it from dav1d's pinned source so releases
+      # carry it. Runs after Local.xcconfig exists, which includes the
+      # Dav1d.xcconfig this writes.
+      - name: Build dav1d
+        run: |
+          brew install meson ninja
+          ./scripts/build_dav1d.sh
+
       - name: Compute release version
         id: version
         run: |

@@ -17,6 +17,10 @@ xcuserdata/
 # Local build config
 Config/Local.xcconfig
 
+# Optional software AV1 decoder (scripts/build_dav1d.sh)
+Vendor/
+Config/Dav1d.xcconfig
+
 # AI/Agent configs
 .claude/
 CLAUDE.md

@@ -206,6 +206,10 @@ extension PlaybackFacade {
         _ result: Result<PreparedPlayback, Error>,
         cancellation: CancellationToken
     ) {
+        // A chain advance for a recovery since superseded.
+        guard !cancellation.isCancelled else {
+            return
+        }
         PlaybackProgress.report = nil
         switch result {
         case .success(let prepared):

@@ -232,6 +232,8 @@
 "settings.row.pip" = "子母畫面";
 "settings.row.hideStatusBar" = "全螢幕時隱藏狀態列";
 "settings.row.zoomToFill" = "全螢幕時縮放以填充";
+"settings.row.softwareAV1" = "透過軟體 AV1 播放 1440p（測試版）";
+"settings.footer.softwareAV1" = "為不支援硬體 AV1 的裝置加入 1440p：影片由 CPU 解碼並重新編碼為 H.264 供播放器使用。「自動」會在影片提供 1440p 時以 1440p 播放。耗電較多，裝置會發熱。";
 "settings.row.showShorts" = "顯示 Shorts";
 "settings.row.autoplay" = "自動播放";
 /* %1$@ = localized "Mix" term (player.related.mix) */

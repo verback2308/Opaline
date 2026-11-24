@@ -9,7 +9,7 @@ final class SettingsViewController: UIViewController {
         case pageSponsorBlock, pageCache, pageDebug, pageDownloads
         case theme, autoDarkStart, autoDarkEnd, appIcon
         case appLanguage, region
-        case quality, qualityCellular
+        case quality, qualityCellular, softwareAV1
         case backgroundPlayback, pipEnabled, hideStatusBar
         case downloadQuality, downloadComments, downloadCaptions
         case showShorts, shortsPlayer, shortsGrouping
@@ -222,6 +222,8 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 "settings.row.qualityCellular".localized,
                 value: VideoQualityStore.displayName(VideoQualityStore.cellular)
             )
+        case .softwareAV1:
+            return makeSoftwareAV1Cell()
         case .downloadQuality:
             return makeDisclosureCell(
                 "settings.row.downloadQuality".localized,
@@ -994,6 +996,8 @@ enum VideoQualityStore {
         var opts = ["Auto", "1080p", "720p", "480p", "360p"]
         if AV1Support.isHardwareSupported {
             opts.insert(contentsOf: ["2160p", "1440p"], at: 1)
+        } else if AV1Support.isSoftwareEnabled {
+            opts.insert("1440p", at: 1)
         }
         return opts
     }
@@ -1018,6 +1022,17 @@ enum VideoQualityStore {
             "2160p": 2_160, "1440p": 1_440, "1080p": 1_080,
             "720p": 720, "480p": 480, "360p": 360
         ][selected] ?? 1_080
+    }
+
+    /// The ceiling for on-demand videos. The software AV1 switch is an
+    /// opt-in too: with it on, Auto goes to 1440p — on Wi-Fi only, where its
+    /// data costs nothing. Live streams never go through the transcoder and
+    /// keep `maxHeight`.
+    static var onDemandMaxHeight: Int? {
+        guard selected == "Auto", AV1Support.isSoftwareEnabled, !NetworkType.isCellular else {
+            return maxHeight
+        }
+        return AV1Support.softwareMaxHeight
     }
 
     /// Display text for a stored value — "Auto" is a stored constant

@@ -232,6 +232,8 @@
 "settings.row.pip" = "Picture-in-Picture";
 "settings.row.hideStatusBar" = "フルスクリーンでステータスバーを隠す";
 "settings.row.zoomToFill" = "フルスクリーンでズームしてフィル";
+"settings.row.softwareAV1" = "ソフトウェアAV1で1440p（ベータ）";
+"settings.footer.softwareAV1" = "ハードウェアAV1非対応の端末で1440pを追加します。動画はCPUでデコードされ、プレーヤー用にH.264へ再エンコードされます。「自動」では1440pがある動画は1440pで再生されます。バッテリー消費が増え、端末が熱くなります。";
 "settings.row.showShorts" = "ショート動画を表示";
 "settings.row.autoplay" = "自動再生";
 /* %1$@ = localized "Mix" term (player.related.mix) */

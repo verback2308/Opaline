@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import QuartzCore
+import UIKit
 
 /// A minimal HTTP/1.1 server on the loopback interface, used to hand SABR media
 /// to AVPlayer.
@@ -52,9 +53,16 @@ final class LocalMediaServer {
     }
 
     private static let startTimeout: TimeInterval = 5
-    private let listener: NWListener
+    /// Replaced on returning to the foreground: iOS reclaims a suspended
+    /// app's listening socket without telling the listener, and every later
+    /// request fails to connect (-1004).
+    /// Internal for LocalMediaServer+Foreground.swift.
+    var listener: NWListener
+    private var foregroundObserver: NSObjectProtocol?
+    /// Bumped per reopen, so a retry left over from an earlier one stops.
+    var rebinds = 0
     private let handler: Handler
-    private let queue = DispatchQueue(label: "com.ytvlite.local-media-server")
+    let queue = DispatchQueue(label: "com.ytvlite.local-media-server")
     /// Accepted connections, so stopping the server takes them down too —
     /// cancelling the listener alone leaves them open for the rest of the
     /// session, one set per video watched.
@@ -65,20 +73,27 @@ final class LocalMediaServer {
     /// happens to be running.
     private var connections: [NWConnection] = []
     private let connectionsLock = NSLock()
+    /// Set by `stop()`; a rebind still on its way then starts nothing.
+    private var stopped = false
 
     /// The port the listener settled on, once it is ready.
     private(set) var port: UInt16?
 
     init?(handler: @escaping Handler) {
-        let parameters = NWParameters.tcp
-        // Loopback only: this must never be reachable from the network.
-        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
-        guard let listener = try? NWListener(using: parameters) else {
+        guard let listener = Self.makeListener(port: .any) else {
             AppLog.hls("local server: could not create listener")
             return nil
         }
         self.listener = listener
         self.handler = handler
+    }
+
+    /// Loopback only: this must never be reachable from the network.
+    static func makeListener(port: NWEndpoint.Port) -> NWListener? {
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: port)
+        parameters.allowLocalEndpointReuse = true
+        return try? NWListener(using: parameters)
     }
 
     /// Starts listening and calls back with the base URL once the port is known.
@@ -91,6 +106,13 @@ final class LocalMediaServer {
             self?.accept(connection)
         }
         listener.start(queue: queue)
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.queue.async { self?.checkAfterForeground() }
+        }
         // A listener that never reaches .ready would otherwise leave the caller
         // waiting forever, which reads as "quality switching does nothing"
         // rather than as a failure.
@@ -124,17 +146,33 @@ final class LocalMediaServer {
     }
 
     func stop() {
-        listener.cancel()
+        foregroundObserver.map(NotificationCenter.default.removeObserver)
         connectionsLock.lock()
+        stopped = true
+        let current = listener
         let live = connections
         connections.removeAll()
         connectionsLock.unlock()
+        current.cancel()
         live.forEach { $0.cancel() }
+    }
+
+    /// Swaps in a rebound listener — under the lock `stop()` reads it with,
+    /// since `stop()` runs off the server queue. False once stopped.
+    func adopt(_ fresh: NWListener, start: () -> Void) -> Bool {
+        connectionsLock.lock()
+        defer { connectionsLock.unlock() }
+        guard !stopped else {
+            return false
+        }
+        listener = fresh
+        start()
+        return true
     }
 
     // MARK: - Connections
 
-    private func accept(_ connection: NWConnection) {
+    func accept(_ connection: NWConnection) {
         // Keep-alive means the player decides when a connection is done, so
         // its end has to be noticed and the socket released — otherwise they
         // pile up in CLOSE_WAIT for the whole session.

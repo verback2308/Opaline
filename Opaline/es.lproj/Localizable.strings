@@ -228,6 +228,8 @@
 "settings.row.pip" = "Imagen en imagen";
 "settings.row.hideStatusBar" = "Ocultar barra de estado en pantalla completa";
 "settings.row.zoomToFill" = "Ampliar para rellenar en pantalla completa";
+"settings.row.softwareAV1" = "1440p mediante AV1 por software (beta)";
+"settings.footer.softwareAV1" = "Añade 1440p en dispositivos sin AV1 por hardware: la CPU decodifica el vídeo y lo recodifica a H.264 para el reproductor. En Automático se reproducirá en 1440p cuando el vídeo lo tenga. Consume más batería y calienta el dispositivo.";
 "settings.row.showShorts" = "Mostrar Shorts";
 "settings.row.autoplay" = "Reproducción automática";
 /* %1$@ = localized "Mix" term (player.related.mix) */

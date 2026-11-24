@@ -1,0 +1,258 @@
+import CoreMedia
+import Foundation
+import VideoToolbox
+
+/// One encoded frame, as length-prefixed NAL units ready for an `mdat`.
+struct EncodedSample {
+    let data: Data
+    let timestamp: Int64
+    let isSync: Bool
+}
+
+/// The SPS and PPS the `avcC` of the init segment carries.
+struct H264ParameterSets: Equatable {
+    let sps: Data
+    let pps: Data
+}
+
+/// The hardware H.264 encoder, used one segment at a time: every segment
+/// opens on a forced key frame so AVPlayer can start or seek into any of
+/// them, and frames are never reordered, so decode and presentation times
+/// stay the source's.
+final class H264SegmentEncoder {
+    private struct Settings {
+        let width: Int
+        let height: Int
+        let bitrate: Int
+        let fps: Int
+    }
+
+    private let settings: Settings
+    /// Replaced when iOS invalidates it — it may, with the app in the
+    /// background — at the next segment start, the next key frame.
+    private var session: VTCompressionSession
+    private var sessionLost = false
+    /// Frames since the last `finishSegment` went missing to a lost session,
+    /// or a replacement session's SPS/PPS differ from the init segment's.
+    private var damaged = false
+    private var verifyParameterSets = false
+    private let lock = NSLock()
+    private var output: [EncodedSample] = []
+    /// What VideoToolbox is told each frame's time is. It insists on
+    /// increasing presentation times for the life of the session, and one
+    /// session serves segments in whatever order playback and seeks ask for
+    /// them — so it runs on its own clock, stepping by each frame's real
+    /// duration (rate control budgets bits per second of that clock) and by
+    /// one nominal frame across any jump. Samples keep their source time.
+    private var clock: EncoderClock
+    private(set) var parameterSets: H264ParameterSets?
+
+    init?(width: Int, height: Int, bitrate: Int, fps: Int) {
+        settings = Settings(width: width, height: height, bitrate: bitrate, fps: fps)
+        guard let created = Self.makeSession(settings) else {
+            return nil
+        }
+        session = created
+        clock = EncoderClock(fps: fps)
+    }
+
+    private static func makeSession(_ settings: Settings) -> VTCompressionSession? {
+        var created: VTCompressionSession?
+        let status = VTCompressionSessionCreate(
+            allocator: nil,
+            width: Int32(settings.width),
+            height: Int32(settings.height),
+            codecType: kCMVideoCodecType_H264,
+            encoderSpecification: nil,
+            imageBufferAttributes: nil,
+            compressedDataAllocator: nil,
+            outputCallback: nil,
+            refcon: nil,
+            compressionSessionOut: &created
+        )
+        guard status == noErr, let created else {
+            return nil
+        }
+        configure(created, settings)
+        VTCompressionSessionPrepareToEncodeFrames(created)
+        return created
+    }
+
+    private static func configure(_ session: VTCompressionSession, _ settings: Settings) {
+        let properties: [CFString: Any] = [
+            kVTCompressionPropertyKey_RealTime: true,
+            kVTCompressionPropertyKey_AllowFrameReordering: false,
+            kVTCompressionPropertyKey_ProfileLevel: kVTProfileLevel_H264_High_AutoLevel,
+            kVTCompressionPropertyKey_AverageBitRate: settings.bitrate,
+            kVTCompressionPropertyKey_ExpectedFrameRate: settings.fps,
+            kVTCompressionPropertyKey_MaxKeyFrameInterval: 100_000
+        ]
+        for (key, value) in properties {
+            VTSessionSetProperty(session, key: key, value: value as CFTypeRef)
+        }
+    }
+
+    private static func isSync(_ sample: CMSampleBuffer) -> Bool {
+        let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: false)
+            as? [[CFString: Any]]
+        let notSync = attachments?.first?[kCMSampleAttachmentKey_NotSync] as? Bool
+        return notSync != true
+    }
+
+    private static func parameterSets(_ format: CMFormatDescription) -> H264ParameterSets? {
+        guard let sps = parameterSet(format, index: 0),
+              let pps = parameterSet(format, index: 1) else {
+            return nil
+        }
+        return H264ParameterSets(sps: sps, pps: pps)
+    }
+
+    private static func parameterSet(_ format: CMFormatDescription, index: Int) -> Data? {
+        var pointer: UnsafePointer<UInt8>?
+        var size = 0
+        let status = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(
+            format,
+            parameterSetIndex: index,
+            parameterSetPointerOut: &pointer,
+            parameterSetSizeOut: &size,
+            parameterSetCountOut: nil,
+            nalUnitHeaderLengthOut: nil
+        )
+        guard status == noErr, let pointer else {
+            return nil
+        }
+        return Data(bytes: pointer, count: size)
+    }
+
+    /// Submits one frame. The first frame of a segment must be a key frame.
+    func encode(_ frame: DecodedFrame, timescale: Int32, keyFrame: Bool) {
+        if keyFrame {
+            replaceLostSession()
+        }
+        let tick = clock.advance(to: frame.timestamp, timescale: timescale)
+        let time = CMTime(value: tick, timescale: timescale)
+        let sourceTime = frame.timestamp
+        let options = keyFrame
+            ? [kVTEncodeFrameOptionKey_ForceKeyFrame: true] as CFDictionary
+            : nil
+        let submitted = VTCompressionSessionEncodeFrame(
+            session,
+            imageBuffer: frame.pixelBuffer,
+            presentationTimeStamp: time,
+            duration: .invalid,
+            frameProperties: options,
+            infoFlagsOut: nil
+        ) { [weak self] status, _, sample in
+            guard status == noErr else {
+                AppLog.hls("av1: encoder failed a frame (\(status))")
+                self?.noteDropped(status)
+                return
+            }
+            // A frame rate control chose to drop: the one before it simply
+            // shows a frame longer, and a dropped key frame is caught by the
+            // chunk's own check.
+            guard let sample else {
+                return
+            }
+            self?.collect(sample, sourceTime: sourceTime)
+        }
+        if submitted != noErr {
+            noteDropped(submitted)
+        }
+    }
+
+    /// Waits for every submitted frame and hands them back, in submission
+    /// order — frames are never reordered. Nothing, when some were lost: a
+    /// chunk short of frames would freeze playback where they are missing.
+    func finishSegment() -> [EncodedSample] {
+        VTCompressionSessionCompleteFrames(session, untilPresentationTimeStamp: .invalid)
+        lock.lock()
+        defer {
+            output = []
+            damaged = false
+            lock.unlock()
+        }
+        return damaged ? [] : output
+    }
+
+    /// A frame lost to an error spoils its chunk; a session that is gone or
+    /// broken is also replaced.
+    private func noteDropped(_ status: OSStatus) {
+        lock.lock()
+        damaged = true
+        if status == kVTInvalidSessionErr || status == kVTVideoEncoderMalfunctionErr {
+            sessionLost = true
+        }
+        lock.unlock()
+    }
+
+    /// The same settings should give the same SPS and PPS, keeping the init
+    /// segment already handed out valid; `collect` checks that they do.
+    private func replaceLostSession() {
+        lock.lock()
+        let lost = sessionLost
+        sessionLost = false
+        lock.unlock()
+        guard lost, let fresh = Self.makeSession(settings) else {
+            return
+        }
+        AppLog.hls("av1: encoder session was invalidated; starting a new one")
+        VTCompressionSessionInvalidate(session)
+        session = fresh
+        lock.lock()
+        verifyParameterSets = true
+        lock.unlock()
+    }
+
+    private func collect(_ sample: CMSampleBuffer, sourceTime: Int64) {
+        guard let block = CMSampleBufferGetDataBuffer(sample) else {
+            return
+        }
+        var data = Data(count: CMBlockBufferGetDataLength(block))
+        data.withUnsafeMutableBytes { raw in
+            guard let base = raw.baseAddress else {
+                return
+            }
+            CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: raw.count, destination: base)
+        }
+        let encoded = EncodedSample(data: data, timestamp: sourceTime, isSync: Self.isSync(sample))
+        lock.lock()
+        output.append(encoded)
+        if parameterSets == nil || verifyParameterSets {
+            let sets = CMSampleBufferGetFormatDescription(sample).flatMap(Self.parameterSets)
+            if parameterSets == nil {
+                parameterSets = sets
+            } else if sets != parameterSets {
+                AppLog.hls("av1: new encoder session changed SPS/PPS; dropping its output")
+                damaged = true
+            } else {
+                verifyParameterSets = false
+            }
+        }
+        lock.unlock()
+    }
+
+    deinit {
+        VTCompressionSessionInvalidate(session)
+    }
+}
+
+/// A presentation clock that only moves forward (see `H264SegmentEncoder`).
+private struct EncoderClock {
+    let fps: Int
+    private var now: Int64 = 0
+    private var lastSource: Int64?
+
+    init(fps: Int) {
+        self.fps = max(1, fps)
+    }
+
+    mutating func advance(to source: Int64, timescale: Int32) -> Int64 {
+        let nominal = max(1, Int64(timescale) / Int64(fps))
+        let step = lastSource.map { source - $0 } ?? nominal
+        // A jump — a new segment out of order, a seek — counts as one frame.
+        now += step > 0 && step < Int64(timescale) ? step : nominal
+        lastSource = source
+        return now
+    }
+}

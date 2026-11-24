@@ -3,8 +3,46 @@ import UIKit
 
 // MARK: - Stream URL Expiration Recovery
 
+/// One recovery's bookkeeping.
+struct RecoveryState {
+    var startedAt: Date?
+    /// Its own, so a newer recovery can cancel it — a stalled one left
+    /// running would attach its item over the new one's — without touching
+    /// the page's loads (comments) on `pageLoadToken`.
+    var token: CancellationToken?
+    /// The broken item being replaced: its further failure reports are not
+    /// the rebuilt item failing.
+    var replacedItem: AVPlayerItem?
+    /// False when the user is only now coming back to the video: it is
+    /// rebuilt and left paused rather than starting with sound.
+    var resumesPlayback = true
+
+    /// A recovery that should still be resolving — its item not ready yet.
+    var isFresh: Bool {
+        startedAt.map { Date().timeIntervalSince($0) < 60 } ?? false
+    }
+}
+
 extension WatchViewController {
+    /// A recovery rebuilding a video the user is only now coming back to.
+    var isPausedRecovery: Bool {
+        pendingRecoverySeek && !recovery.resumesPlayback
+    }
+
+    /// Whether a rebuilt stream should play on. In the background with
+    /// background playback off (and no PiP) nobody asked for sound: it is
+    /// rebuilt and left paused.
+    var shouldResumeAfterRecovery: Bool {
+        UIApplication.shared.applicationState != .background
+            || BackgroundPlaybackService.isEnabled
+            || videoPlayerView?.isPiPActive == true
+    }
+
     func recoverPlayback() {
+        recoverPlayback(resume: shouldResumeAfterRecovery)
+    }
+
+    func recoverPlayback(resume: Bool) {
         guard !isRecoveringPlayback,
               videoPlayerView?.player != nil
         else {
@@ -13,13 +51,19 @@ extension WatchViewController {
         AppLog.player(
             "recoverPlayback: resumeAt=\(lastPlaybackPosition)s"
         )
+        recovery.token?.cancel()
         let token = CancellationToken()
-        pageLoadToken = token
         guard playbackFacade.recover(cancellationToken: token) else {
             showPlaybackError("player.error.playback".localized)
             return
         }
         isRecoveringPlayback = true
+        recovery = RecoveryState(
+            startedAt: Date(),
+            token: token,
+            replacedItem: videoPlayerView?.player?.currentItem,
+            resumesPlayback: resume
+        )
         hasSeenPlaybackError = false
         pendingRecoverySeek = true
     }
@@ -31,6 +75,10 @@ extension WatchViewController {
             return false
         }
         isRecoveringPlayback = false
+        // The replaced item's later failure reports set this; it is fixed now.
+        hasSeenPlaybackError = false
+        let resume = recovery.resumesPlayback
+        recovery = RecoveryState()
         let target = lastPlaybackPosition
         // A rebuilt stream that already opens at the playhead is where it
         // needs to be. Seeking there anyway leaves the player working the head
@@ -38,7 +86,7 @@ extension WatchViewController {
         if let startsAt = itemStartsAt, abs(startsAt - target) <= 1 {
             AppLog.player("recoverPlayback: ready at \(target)s, stream opened there")
             pendingRecoverySeek = false
-            videoPlayerView?.player?.play()
+            resumeAfterRecovery(resume)
             return true
         }
         AppLog.player(
@@ -57,8 +105,32 @@ extension WatchViewController {
             if finished {
                 self?.pendingRecoverySeek = false
             }
-            self?.videoPlayerView?.player?.play()
+            self?.resumeAfterRecovery(resume)
         }
+        return true
+    }
+
+    private func resumeAfterRecovery(_ resume: Bool) {
+        if resume {
+            videoPlayerView?.player?.play()
+        } else if videoPlayerView?.player?.rate == 0 {
+            // Left paused — unless the user already pressed Play meanwhile.
+            videoPlayerView?.setControls(visible: true, animated: true)
+        }
+    }
+
+    /// A recovery whose own new item failed before it was ready is over:
+    /// go again (the facade moves down the chain, then gives up with an
+    /// error) rather than leave it marked in progress over a dead item.
+    func recoverIfOwnItemFailed(_ item: AVPlayerItem?) -> Bool {
+        guard isRecoveringPlayback, pendingRecoverySeek,
+              item === videoPlayerView?.player?.currentItem,
+              item !== recovery.replacedItem else {
+            return false
+        }
+        AppLog.player("recoverPlayback: the rebuilt item failed, trying again")
+        isRecoveringPlayback = false
+        recoverPlayback(resume: recovery.resumesPlayback)
         return true
     }
 }
