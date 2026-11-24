@@ -1,13 +1,5 @@
 import UIKit
 
-struct WatchProgress {
-    let fraction: Double
-
-    var shouldShow: Bool {
-        fraction > 0.03
-    }
-}
-
 /// Stores per-video watch progress. Written both by this device
 /// while playing (`setLocalFraction`) and by the server —
 /// WatchProgressSyncService plus inline extraction from
@@ -17,12 +9,15 @@ struct WatchProgress {
 /// watchtime pings have to land and propagate), so a fresh local
 /// entry wins over anything the server says for `serverGrace`;
 /// after that the server is the better truth, because it also
-/// carries views from other devices.
+/// carries views from other devices — where it has one. A video
+/// the server lists no position for keeps the one this device
+/// recorded: YouTube does not always store a resume point.
 final class WatchProgressStore {
     static let shared = WatchProgressStore()
 
     private let fractionKey = "WatchProgressStore.fractions"
     private let localTimesKey = "WatchProgressStore.localTimes"
+    private let localIdsKey = "WatchProgressStore.localRecorded"
     /// Set by the player for a video that plays as part of a queue: those
     /// open at their start, whoever asks. Video sources read this store
     /// directly and build the stream at the saved playhead, so the rule has
@@ -42,6 +37,10 @@ final class WatchProgressStore {
     /// (epoch seconds). Only entries younger than `serverGrace`
     /// matter; older ones are dropped on write.
     private var localTimes: [String: Double] = [:]
+    /// Videos whose stored position this device recorded, and when
+    /// (epoch seconds): kept through a history sync that has none
+    /// for them, and evicted oldest first once the table is full.
+    private var localIds: [String: Double] = [:]
 
     /// Serial: all UserDefaults writes and pending-write bookkeeping
     /// happen here, off the lock.
@@ -80,7 +79,7 @@ final class WatchProgressStore {
         lock.lock()
         if !isLocallyFreshLocked(videoId) {
             fractions[videoId] = fraction
-            trimLocked()
+            trimLocked(keeping: videoId)
         }
         lock.unlock()
         schedulePersist()
@@ -98,7 +97,8 @@ final class WatchProgressStore {
         }
         fractions[videoId] = fraction
         localTimes[videoId] = Date().timeIntervalSince1970
-        trimLocked()
+        localIds[videoId] = Date().timeIntervalSince1970
+        trimLocked(keeping: videoId)
         lock.unlock()
         schedulePersist()
     }
@@ -112,10 +112,16 @@ final class WatchProgressStore {
         lock.lock()
         var merged = entries
         for (videoId, fraction) in fractions
-            where isLocallyFreshLocked(videoId) {
+            where isLocallyFreshLocked(videoId)
+            || (entries[videoId] == nil && localIds[videoId] != nil) {
             merged[videoId] = fraction
         }
         fractions = merged
+        // Kept only while the server has no position (or ours is fresher).
+        localIds = localIds.filter {
+            merged[$0.key] != nil
+                && (entries[$0.key] == nil || isLocallyFreshLocked($0.key))
+        }
         trimLocked()
         lock.unlock()
         persistQueue.async {
@@ -172,6 +178,7 @@ final class WatchProgressStore {
         lock.lock()
         fractions.removeAll()
         localTimes.removeAll()
+        localIds.removeAll()
         lock.unlock()
         persistQueue.async {
             self.pendingWork?.cancel()
@@ -181,6 +188,9 @@ final class WatchProgressStore {
             )
             UserDefaults.standard.removeObject(
                 forKey: self.localTimesKey
+            )
+            UserDefaults.standard.removeObject(
+                forKey: self.localIdsKey
             )
         }
     }
@@ -195,22 +205,35 @@ final class WatchProgressStore {
         return Date().timeIntervalSince1970 - at < serverGrace
     }
 
-    /// Caps the table and drops local stamps that have aged out of
-    /// the grace window. Call with `lock` held.
-    private func trimLocked() {
+    /// Caps the table and drops aged-out local stamps. Over the cap,
+    /// server-only entries go first, then this device's oldest, never
+    /// `kept` (just written). Call with `lock` held.
+    private func trimLocked(keeping kept: String? = nil) {
         let cutoff = Date().timeIntervalSince1970 - serverGrace
         localTimes = localTimes.filter { $0.value >= cutoff }
+        // At most half the table, so other devices' positions stay.
+        let overKept = localIds.count - maxEntries / 2
+        if overKept > 0 {
+            let oldest = localIds.sorted { $0.value < $1.value }.map(\.key).filter { $0 != kept }
+            oldest.prefix(overKept).forEach { localIds.removeValue(forKey: $0) }
+        }
         guard fractions.count > maxEntries else {
             return
         }
-        let excess = fractions.count - maxEntries
-        fractions.keys.prefix(excess).forEach {
-            fractions.removeValue(forKey: $0)
+        let serverOnly = fractions.keys.filter { localIds[$0] == nil && $0 != kept }
+        let oldestLocal = localIds.filter { $0.key != kept }
+            .sorted { $0.value < $1.value }
+            .map(\.key)
+        for videoId in (serverOnly + oldestLocal).prefix(fractions.count - maxEntries) {
+            fractions.removeValue(forKey: videoId)
+            localIds.removeValue(forKey: videoId)
         }
     }
+}
 
-    // MARK: - Persistence
+// MARK: - Persistence
 
+extension WatchProgressStore {
     private func loadFractions() {
         let defaults = UserDefaults.standard
         if let raw = defaults.dictionary(
@@ -222,6 +245,9 @@ final class WatchProgressStore {
             forKey: localTimesKey
         ) as? [String: Double] {
             localTimes = times
+        }
+        if let ids = defaults.dictionary(forKey: localIdsKey) as? [String: Double] {
+            localIds = ids
         }
     }
 
@@ -253,9 +279,11 @@ final class WatchProgressStore {
         lock.lock()
         let snapshot = fractions
         let times = localTimes
+        let ids = localIds
         lock.unlock()
         UserDefaults.standard.set(snapshot, forKey: fractionKey)
         UserDefaults.standard.set(times, forKey: localTimesKey)
+        UserDefaults.standard.set(ids, forKey: localIdsKey)
     }
 
     @objc
