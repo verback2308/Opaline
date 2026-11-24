@@ -35,10 +35,12 @@ extension WatchViewController {
         backgroundEnteredAt = nil
         // A failed item never plays again by itself: without this, a stream
         // that failed in the background left a black screen and a spinner.
-        // A recovery begun in the background may be stuck waiting for an
-        // item that failed too, so it does not block this one.
-        let failed = videoPlayerView?.player?.currentItem?.status == .failed
-        if recoverOnForeground || failed {
+        // A recovery still resolving for that item is left to finish; one
+        // whose own new item failed is stuck, and makes way.
+        let item = videoPlayerView?.player?.currentItem
+        let failed = item?.status == .failed
+        let inFlight = isRecoveringPlayback && item === recoveryItem
+        if recoverOnForeground || (failed && !inFlight) {
             recoverOnForeground = false
             if failed {
                 isRecoveringPlayback = false

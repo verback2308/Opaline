@@ -176,6 +176,13 @@ extension WatchViewController {
     func playerItemDidFailToPlayToEnd(
         _ note: Notification
     ) {
+        // AVFoundation may post this off the main thread.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.playerItemDidFailToPlayToEnd(note)
+            }
+            return
+        }
         let errorKey =
             AVPlayerItemFailedToPlayToEndTimeErrorKey
         let error =
