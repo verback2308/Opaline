@@ -80,6 +80,9 @@ extension WatchViewController {
 
     func logReadyToPlay(_ item: AVPlayerItem) {
         if applyRecoverySeekIfNeeded(item) {
+            // The rebuilt player needs its lock-screen controls back: the
+            // attach ended the old Now Playing session.
+            beginNowPlayingSession(duration: CMTimeGetSeconds(item.duration))
             return
         }
         // Not an early return: a switched stream still needs its Now Playing
