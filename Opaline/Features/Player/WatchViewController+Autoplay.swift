@@ -37,16 +37,17 @@ extension WatchViewController {
     /// countdown overlay is suggestion-autoplay only. The queue is peeked,
     /// not advanced: navigation syncs it via seekTo.
     private func playQueueEntry(_ next: Video) {
-        if holdsAutoplayInBackground(next) {
-            return
-        }
         guard AutoplayPreference.isMixEnabled else {
             showEndScreen(reason: "queue next=\(next.id), mix autoplay off")
             return
         }
         AppLog.player("playToEnd: queue next=\(next.id)")
         DispatchQueue.main.async { [weak self] in
-            self?.navigateTo(next)
+            // On main: the hold reads applicationState.
+            guard let self, !self.holdsAutoplayInBackground(next) else {
+                return
+            }
+            self.navigateTo(next)
         }
     }
 
