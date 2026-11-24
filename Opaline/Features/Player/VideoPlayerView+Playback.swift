@@ -20,9 +20,9 @@ extension VideoPlayerView {
         addPlayerObservers()
         updatePlayPauseIcon()
         setupPiP()
-        if playbackSpeed != 1.0 {
-            newPlayer.rate = playbackSpeed
-        }
+        // The speed is applied by whoever starts playback
+        // (`playImmediately(atRate:)`); setting it here as a rate started a
+        // player meant to stay paused.
     }
 
     /// Rebinds observers after the host replaced the item on the SAME

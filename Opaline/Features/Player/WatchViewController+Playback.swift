@@ -53,10 +53,7 @@ extension WatchViewController {
         // Start as soon as the first frames are decodable instead of
         // waiting for the stall-minimizing buffer to fill — unless this is
         // a recovery meant to leave the video paused.
-        if isPausedRecovery {
-            // `attach` sets a non-1× speed as a rate, which would start it.
-            player.pause()
-        } else {
+        if !isPausedRecovery {
             player.playImmediately(atRate: pv.playbackSpeed)
         }
     }
