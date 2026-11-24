@@ -33,6 +33,20 @@ extension WatchViewController {
             Date().timeIntervalSince($0)
         } ?? 0
         backgroundEnteredAt = nil
+        // A failed item never plays again by itself: without this, a stream
+        // that failed in the background left a black screen and a spinner.
+        // A recovery begun in the background may be stuck waiting for an
+        // item that failed too, so it does not block this one.
+        let failed = videoPlayerView?.player?.currentItem?.status == .failed
+        if recoverOnForeground || failed {
+            recoverOnForeground = false
+            if failed {
+                isRecoveringPlayback = false
+            }
+            AppLog.player("foreground: playback failed in the background, recovering")
+            recoverPlayback()
+            return
+        }
         if elapsed > 120, hasSeenPlaybackError {
             AppLog.player(
                 "foreground: URLs likely expired"

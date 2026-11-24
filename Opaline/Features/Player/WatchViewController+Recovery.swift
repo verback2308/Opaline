@@ -10,6 +10,16 @@ extension WatchViewController {
         else {
             return
         }
+        // With background playback off nobody is watching: a stream rebuilt
+        // during a background wake-up would only fail again once iOS
+        // suspends the app, loopback server and all. Rebuild on return.
+        if UIApplication.shared.applicationState == .background,
+           !BackgroundPlaybackService.isEnabled,
+           videoPlayerView?.isPiPActive != true {
+            AppLog.player("recoverPlayback: in the background, deferred to foreground")
+            recoverOnForeground = true
+            return
+        }
         AppLog.player(
             "recoverPlayback: resumeAt=\(lastPlaybackPosition)s"
         )
