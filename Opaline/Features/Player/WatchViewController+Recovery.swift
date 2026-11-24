@@ -6,9 +6,13 @@ import UIKit
 /// One recovery's bookkeeping.
 struct RecoveryState {
     var startedAt: Date?
-    /// Its own, so a newer recovery can cancel it: a stalled one left
-    /// running would attach its item over the new one's.
+    /// Its own, so a newer recovery can cancel it — a stalled one left
+    /// running would attach its item over the new one's — without touching
+    /// the page's loads (comments) on `pageLoadToken`.
     var token: CancellationToken?
+    /// The broken item being replaced: its further failure reports are not
+    /// the rebuilt item failing.
+    var replacedItem: AVPlayerItem?
     /// False when the user is only now coming back to the video: it is
     /// rebuilt and left paused rather than starting with sound.
     var resumesPlayback = true
@@ -36,13 +40,17 @@ extension WatchViewController {
         )
         recovery.token?.cancel()
         let token = CancellationToken()
-        pageLoadToken = token
         guard playbackFacade.recover(cancellationToken: token) else {
             showPlaybackError("player.error.playback".localized)
             return
         }
         isRecoveringPlayback = true
-        recovery = RecoveryState(startedAt: Date(), token: token, resumesPlayback: resume)
+        recovery = RecoveryState(
+            startedAt: Date(),
+            token: token,
+            replacedItem: videoPlayerView?.player?.currentItem,
+            resumesPlayback: resume
+        )
         hasSeenPlaybackError = false
         pendingRecoverySeek = true
     }
@@ -90,8 +98,8 @@ extension WatchViewController {
     private func resumeAfterRecovery(_ resume: Bool) {
         if resume {
             videoPlayerView?.player?.play()
-        } else {
-            videoPlayerView?.player?.pause()
+        } else if videoPlayerView?.player?.rate == 0 {
+            // Left paused — unless the user already pressed Play meanwhile.
             videoPlayerView?.setControls(visible: true, animated: true)
         }
     }
@@ -101,7 +109,8 @@ extension WatchViewController {
     /// error) rather than leave it marked in progress over a dead item.
     func recoverIfOwnItemFailed(_ item: AVPlayerItem?) -> Bool {
         guard isRecoveringPlayback, pendingRecoverySeek,
-              item === videoPlayerView?.player?.currentItem else {
+              item === videoPlayerView?.player?.currentItem,
+              item !== recovery.replacedItem else {
             return false
         }
         AppLog.player("recoverPlayback: the rebuilt item failed, trying again")

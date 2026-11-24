@@ -429,6 +429,7 @@ extension WatchViewController {
 
     func resetVideoState() {
         // A recovery belongs to the video it began for.
+        recovery.token?.cancel()
         recovery = RecoveryState()
         isRecoveringPlayback = false
         pendingRecoverySeek = false
