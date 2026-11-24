@@ -90,7 +90,7 @@ final class WatchViewController: UIViewController {
     /// Source-reported: duration, and where the stream itself starts.
     var preparedDuration: Double?, itemStartsAt: Double?
     var captionTracks: [SubtitleTrack] = [], activeSubtitleLanguage: String?
-    var backgroundEnteredAt: Date?, savedPlayerForBackground: AVPlayer?, recoveryStartedAt: Date?
+    var backgroundEnteredAt: Date?, savedPlayerForBackground: AVPlayer?, recovery = RecoveryState()
     var isRecoveringPlayback = false, hasSeenPlaybackError = false
     /// Frozen during a recovery seek: a fresh item's zeroed clock must not
     /// overwrite where the user actually was.

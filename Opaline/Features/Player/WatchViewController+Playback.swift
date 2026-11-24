@@ -51,8 +51,11 @@ extension WatchViewController {
         playerContainer.bringSubviewToFront(pv)
         pv.attach(player: player)
         // Start as soon as the first frames are decodable instead of
-        // waiting for the stall-minimizing buffer to fill.
-        player.playImmediately(atRate: pv.playbackSpeed)
+        // waiting for the stall-minimizing buffer to fill — unless this is
+        // a recovery meant to leave the video paused.
+        if !isPausedRecovery {
+            player.playImmediately(atRate: pv.playbackSpeed)
+        }
     }
 
     private func attachToExistingPlayer(
@@ -67,7 +70,9 @@ extension WatchViewController {
         player.replaceCurrentItem(with: item)
         // The duration KVO binds player.currentItem — rebind after the swap.
         videoPlayerView?.rebind(player: player)
-        player.play()
+        if !isPausedRecovery {
+            player.play()
+        }
     }
 
     /// Moves the playing item onto a brand-new `AVPlayer`. The old one is

@@ -145,8 +145,13 @@ extension WatchViewController {
                 + " code=\(code)"
         )
         logUnderlyingError(nsError)
+        if recoverIfOwnItemFailed(item) {
+            return
+        }
+        // -1004/-1005 here are the loopback server, gone with a suspension.
+        let loopbackLost = domain == NSURLErrorDomain && [-1_004, -1_005].contains(code)
         if code == -12_660
-            || domain == "CoreMediaErrorDomain" {
+            || domain == "CoreMediaErrorDomain" || loopbackLost {
             hasSeenPlaybackError = true
             if !isRecoveringPlayback {
                 AppLog.player(
@@ -191,6 +196,14 @@ extension WatchViewController {
         AppLog.player(
             "player item failed to end: \(error)"
         )
+        let item = note.object as? AVPlayerItem
+        // A failure of an item already replaced is not this one's.
+        guard item === videoPlayerView?.player?.currentItem else {
+            return
+        }
+        if recoverIfOwnItemFailed(item) {
+            return
+        }
         hasSeenPlaybackError = true
         if !isRecoveringPlayback {
             recoverPlayback()
@@ -232,7 +245,7 @@ extension WatchViewController {
                 + " comment=\(comment),"
                 + " uri=\(uri)"
         )
-        if last.errorStatusCode == 403 {
+        if last.errorStatusCode == 403, item === videoPlayerView?.player?.currentItem {
             hasSeenPlaybackError = true
             if !isRecoveringPlayback {
                 AppLog.player(

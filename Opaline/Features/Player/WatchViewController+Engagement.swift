@@ -38,12 +38,12 @@ extension WatchViewController {
         // it: either left a black screen and a spinner. A recovery under a
         // minute old is still resolving and left to finish.
         let failed = videoPlayerView?.player?.currentItem?.status == .failed
-        let fresh = recoveryStartedAt.map { Date().timeIntervalSince($0) < 60 } ?? false
-        let resolving = isRecoveringPlayback && fresh
+        let resolving = isRecoveringPlayback && recovery.isFresh
         if !resolving, failed || isRecoveringPlayback {
             isRecoveringPlayback = false
             AppLog.player("foreground: playback failed or stalled in the background, recovering")
-            recoverPlayback()
+            // The user is only now back: rebuild it paused, not with sound.
+            recoverPlayback(resume: false)
             return
         }
         if elapsed > 120, hasSeenPlaybackError {
