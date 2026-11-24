@@ -29,7 +29,20 @@ extension WatchViewController {
         pendingRecoverySeek && !recovery.resumesPlayback
     }
 
-    func recoverPlayback(resume: Bool = true) {
+    /// Whether a rebuilt stream should play on. In the background with
+    /// background playback off (and no PiP) nobody asked for sound: it is
+    /// rebuilt and left paused.
+    var shouldResumeAfterRecovery: Bool {
+        UIApplication.shared.applicationState != .background
+            || BackgroundPlaybackService.isEnabled
+            || videoPlayerView?.isPiPActive == true
+    }
+
+    func recoverPlayback() {
+        recoverPlayback(resume: shouldResumeAfterRecovery)
+    }
+
+    func recoverPlayback(resume: Bool) {
         guard !isRecoveringPlayback,
               videoPlayerView?.player != nil
         else {
@@ -62,6 +75,8 @@ extension WatchViewController {
             return false
         }
         isRecoveringPlayback = false
+        // The replaced item's later failure reports set this; it is fixed now.
+        hasSeenPlaybackError = false
         let resume = recovery.resumesPlayback
         recovery = RecoveryState()
         let target = lastPlaybackPosition

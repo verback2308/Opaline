@@ -51,7 +51,8 @@ extension WatchViewController {
                 "foreground: URLs likely expired"
                     + " (\(Int(elapsed))s in bg), recovering"
             )
-            recoverPlayback()
+            // Play on only if it was playing (background playback on).
+            recoverPlayback(resume: (videoPlayerView?.player?.rate ?? 0) > 0)
         }
     }
 

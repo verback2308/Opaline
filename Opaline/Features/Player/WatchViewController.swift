@@ -278,6 +278,7 @@ final class WatchViewController: UIViewController {
             || navigationController?.isBeingDismissed == true
         if isDismissing {
             pageLoadToken.cancel()
+            recovery.token?.cancel()
             videoPlayerView?.player?.pause()
         }
     }
