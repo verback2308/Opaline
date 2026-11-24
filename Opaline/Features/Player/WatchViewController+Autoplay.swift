@@ -37,6 +37,9 @@ extension WatchViewController {
     /// countdown overlay is suggestion-autoplay only. The queue is peeked,
     /// not advanced: navigation syncs it via seekTo.
     private func playQueueEntry(_ next: Video) {
+        if holdsAutoplayInBackground(next) {
+            return
+        }
         guard AutoplayPreference.isMixEnabled else {
             showEndScreen(reason: "queue next=\(next.id), mix autoplay off")
             return
@@ -60,7 +63,7 @@ extension WatchViewController {
             )
             if active {
                 self.showAutoplayOverlay(for: nextVideo)
-            } else {
+            } else if !self.holdsAutoplayInBackground(nextVideo) {
                 self.navigateTo(nextVideo)
             }
         }
@@ -110,6 +113,10 @@ extension WatchViewController {
         )
         overlay.alpha = 0
         overlay.onPlay = { [weak self] in
+            // The countdown can run out after the screen locked.
+            if self?.holdsAutoplayInBackground(video) == true {
+                return
+            }
             self?.dismissAutoplayOverlay()
             self?.navigateTo(video)
         }
@@ -213,5 +220,37 @@ extension WatchViewController {
                 overlay.removeFromSuperview()
             }
         )
+    }
+}
+
+// MARK: - Background playback off
+
+extension WatchViewController {
+    /// With background playback off nothing plays while the app is in the
+    /// background, so moving on to the next video there only loads it
+    /// unseen — its page with the network asleep, its playback paused.
+    /// Leave the next video to the countdown on return instead.
+    func holdsAutoplayInBackground(_ next: Video) -> Bool {
+        // Background only: a countdown ending under Control Center (inactive)
+        // still plays on, as the app is on screen.
+        guard UIApplication.shared.applicationState == .background,
+              !BackgroundPlaybackService.isEnabled,
+              videoPlayerView?.isPiPActive != true else {
+            return false
+        }
+        AppLog.player("autoplay: holding \(next.id) until the app is back")
+        dismissAutoplayOverlay()
+        heldAutoplay = next
+        return true
+    }
+
+    /// On return, the held next video gets its countdown as if the
+    /// previous one had just ended.
+    func resumeHeldAutoplay() {
+        guard let next = heldAutoplay else {
+            return
+        }
+        heldAutoplay = nil
+        showAutoplayOverlay(for: next)
     }
 }
