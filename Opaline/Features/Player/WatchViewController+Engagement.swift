@@ -29,6 +29,7 @@ extension WatchViewController {
     @objc
     func appWillEnterForeground() {
         AppLog.player("appWillEnterForeground")
+        resumeHeldAutoplay()
         let elapsed = backgroundEnteredAt.map {
             Date().timeIntervalSince($0)
         } ?? 0

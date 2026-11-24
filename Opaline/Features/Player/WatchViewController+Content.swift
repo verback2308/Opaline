@@ -25,6 +25,10 @@ private func formatVoteCount(_ count: Int) -> String {
 
 extension WatchViewController {
     func loadInitialState() {
+        // The watch page refines both; until it arrives (or if it never
+        // does, as when it times out with the screen locked) neither may
+        // still name the previous video.
+        title = initialVideo.title
         titleLabel.text = initialVideo.title
         metaLabel.text = buildMetaText(
             viewCount: initialVideo.viewCount,
@@ -430,6 +434,12 @@ extension WatchViewController {
     func resetVideoState() {
         // Loop is a property of the video you turned it on for.
         videoPlayerView?.isLooping = false
+        // The playhead is too: a recovery before the new video has played
+        // would otherwise seek it to where the previous one stopped.
+        lastPlaybackPosition = 0
+        heldAutoplay = nil
+        // So the new video's own saved position is sought once ready.
+        didSeekToSavedPosition = false
         watchPage = nil
         isLoadingRelated = true
         allRelatedVideos = []

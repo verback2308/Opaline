@@ -145,7 +145,9 @@ extension WatchViewController {
     ) {
         sponsorBlock.attach(to: playerView)
         playerView.onTimeUpdate = { [weak self] time in
-            if self?.pendingRecoverySeek == false {
+            // Not while a background switch keeps the previous video's
+            // player running: its time is not the new video's.
+            if self?.pendingRecoverySeek == false, self?.savedPlayerForBackground == nil {
                 self?.lastPlaybackPosition = time
             }
             self?.sponsorBlock.checkTime(time)
