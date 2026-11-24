@@ -25,7 +25,7 @@ final class WatchProgressStore {
 
     private let fractionKey = "WatchProgressStore.fractions"
     private let localTimesKey = "WatchProgressStore.localTimes"
-    private let localIdsKey = "WatchProgressStore.localIds"
+    private let localIdsKey = "WatchProgressStore.localRecorded"
     /// Set by the player for a video that plays as part of a queue: those
     /// open at their start, whoever asks. Video sources read this store
     /// directly and build the stream at the saved playhead, so the rule has
@@ -45,9 +45,10 @@ final class WatchProgressStore {
     /// (epoch seconds). Only entries younger than `serverGrace`
     /// matter; older ones are dropped on write.
     private var localTimes: [String: Double] = [:]
-    /// Videos whose stored position this device recorded, kept
-    /// through a history sync that has none for them.
-    private var localIds = Set<String>()
+    /// Videos whose stored position this device recorded, and when
+    /// (epoch seconds): kept through a history sync that has none
+    /// for them, and evicted oldest first once the table is full.
+    private var localIds: [String: Double] = [:]
 
     /// Serial: all UserDefaults writes and pending-write bookkeeping
     /// happen here, off the lock.
@@ -86,7 +87,7 @@ final class WatchProgressStore {
         lock.lock()
         if !isLocallyFreshLocked(videoId) {
             fractions[videoId] = fraction
-            trimLocked()
+            trimLocked(keeping: videoId)
         }
         lock.unlock()
         schedulePersist()
@@ -104,8 +105,8 @@ final class WatchProgressStore {
         }
         fractions[videoId] = fraction
         localTimes[videoId] = Date().timeIntervalSince1970
-        localIds.insert(videoId)
-        trimLocked()
+        localIds[videoId] = Date().timeIntervalSince1970
+        trimLocked(keeping: videoId)
         lock.unlock()
         schedulePersist()
     }
@@ -120,11 +121,11 @@ final class WatchProgressStore {
         var merged = entries
         for (videoId, fraction) in fractions
             where isLocallyFreshLocked(videoId)
-            || (entries[videoId] == nil && localIds.contains(videoId)) {
+            || (entries[videoId] == nil && localIds[videoId] != nil) {
             merged[videoId] = fraction
         }
         fractions = merged
-        localIds.formIntersection(merged.keys)
+        localIds = localIds.filter { merged[$0.key] != nil }
         trimLocked()
         lock.unlock()
         persistQueue.async {
@@ -209,17 +210,22 @@ final class WatchProgressStore {
     }
 
     /// Caps the table and drops local stamps that have aged out of
-    /// the grace window. Call with `lock` held.
-    private func trimLocked() {
+    /// the grace window. Over the cap, entries only the server knows
+    /// go first, then this device's oldest — never `kept`, the one
+    /// just written. Call with `lock` held.
+    private func trimLocked(keeping kept: String? = nil) {
         let cutoff = Date().timeIntervalSince1970 - serverGrace
         localTimes = localTimes.filter { $0.value >= cutoff }
         guard fractions.count > maxEntries else {
             return
         }
-        let excess = fractions.count - maxEntries
-        fractions.keys.prefix(excess).forEach {
-            fractions.removeValue(forKey: $0)
-            localIds.remove($0)
+        let serverOnly = fractions.keys.filter { localIds[$0] == nil && $0 != kept }
+        let oldestLocal = localIds.filter { $0.key != kept }
+            .sorted { $0.value < $1.value }
+            .map(\.key)
+        for videoId in (serverOnly + oldestLocal).prefix(fractions.count - maxEntries) {
+            fractions.removeValue(forKey: videoId)
+            localIds.removeValue(forKey: videoId)
         }
     }
 }
@@ -239,8 +245,10 @@ extension WatchProgressStore {
         ) as? [String: Double] {
             localTimes = times
         }
-        if let ids = defaults.stringArray(forKey: localIdsKey) {
-            localIds = Set(ids)
+        if let ids = defaults.dictionary(
+            forKey: localIdsKey
+        ) as? [String: Double] {
+            localIds = ids
         }
     }
 
@@ -272,7 +280,7 @@ extension WatchProgressStore {
         lock.lock()
         let snapshot = fractions
         let times = localTimes
-        let ids = Array(localIds)
+        let ids = localIds
         lock.unlock()
         UserDefaults.standard.set(snapshot, forKey: fractionKey)
         UserDefaults.standard.set(times, forKey: localTimesKey)
