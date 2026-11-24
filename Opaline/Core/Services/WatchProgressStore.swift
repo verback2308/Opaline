@@ -17,12 +17,15 @@ struct WatchProgress {
 /// watchtime pings have to land and propagate), so a fresh local
 /// entry wins over anything the server says for `serverGrace`;
 /// after that the server is the better truth, because it also
-/// carries views from other devices.
+/// carries views from other devices — where it has one. A video
+/// the server lists no position for keeps the one this device
+/// recorded: YouTube does not always store a resume point.
 final class WatchProgressStore {
     static let shared = WatchProgressStore()
 
     private let fractionKey = "WatchProgressStore.fractions"
     private let localTimesKey = "WatchProgressStore.localTimes"
+    private let localIdsKey = "WatchProgressStore.localIds"
     /// Set by the player for a video that plays as part of a queue: those
     /// open at their start, whoever asks. Video sources read this store
     /// directly and build the stream at the saved playhead, so the rule has
@@ -42,6 +45,9 @@ final class WatchProgressStore {
     /// (epoch seconds). Only entries younger than `serverGrace`
     /// matter; older ones are dropped on write.
     private var localTimes: [String: Double] = [:]
+    /// Videos whose stored position this device recorded, kept
+    /// through a history sync that has none for them.
+    private var localIds = Set<String>()
 
     /// Serial: all UserDefaults writes and pending-write bookkeeping
     /// happen here, off the lock.
@@ -98,6 +104,7 @@ final class WatchProgressStore {
         }
         fractions[videoId] = fraction
         localTimes[videoId] = Date().timeIntervalSince1970
+        localIds.insert(videoId)
         trimLocked()
         lock.unlock()
         schedulePersist()
@@ -112,10 +119,12 @@ final class WatchProgressStore {
         lock.lock()
         var merged = entries
         for (videoId, fraction) in fractions
-            where isLocallyFreshLocked(videoId) {
+            where isLocallyFreshLocked(videoId)
+            || (entries[videoId] == nil && localIds.contains(videoId)) {
             merged[videoId] = fraction
         }
         fractions = merged
+        localIds.formIntersection(merged.keys)
         trimLocked()
         lock.unlock()
         persistQueue.async {
@@ -172,6 +181,7 @@ final class WatchProgressStore {
         lock.lock()
         fractions.removeAll()
         localTimes.removeAll()
+        localIds.removeAll()
         lock.unlock()
         persistQueue.async {
             self.pendingWork?.cancel()
@@ -181,6 +191,9 @@ final class WatchProgressStore {
             )
             UserDefaults.standard.removeObject(
                 forKey: self.localTimesKey
+            )
+            UserDefaults.standard.removeObject(
+                forKey: self.localIdsKey
             )
         }
     }
@@ -206,11 +219,14 @@ final class WatchProgressStore {
         let excess = fractions.count - maxEntries
         fractions.keys.prefix(excess).forEach {
             fractions.removeValue(forKey: $0)
+            localIds.remove($0)
         }
     }
+}
 
-    // MARK: - Persistence
+// MARK: - Persistence
 
+extension WatchProgressStore {
     private func loadFractions() {
         let defaults = UserDefaults.standard
         if let raw = defaults.dictionary(
@@ -222,6 +238,9 @@ final class WatchProgressStore {
             forKey: localTimesKey
         ) as? [String: Double] {
             localTimes = times
+        }
+        if let ids = defaults.stringArray(forKey: localIdsKey) {
+            localIds = Set(ids)
         }
     }
 
@@ -253,9 +272,11 @@ final class WatchProgressStore {
         lock.lock()
         let snapshot = fractions
         let times = localTimes
+        let ids = Array(localIds)
         lock.unlock()
         UserDefaults.standard.set(snapshot, forKey: fractionKey)
         UserDefaults.standard.set(times, forKey: localTimesKey)
+        UserDefaults.standard.set(ids, forKey: localIdsKey)
     }
 
     @objc
