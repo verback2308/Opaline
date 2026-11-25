@@ -54,6 +54,14 @@ extension WatchViewController {
         if let resumeAt, CMTimeGetSeconds(resumeAt) > 1 {
             pendingResumeSeek = resumeAt
         }
+        // The clock reads 0:00 until the item reports a time, seconds away on
+        // a slow stream; show where playback is going to start instead.
+        let start = resumeAt.map(CMTimeGetSeconds)
+            ?? prepared.startsAt
+            ?? rebuildPlayhead.map(CMTimeGetSeconds)
+        if let start, start > 1 {
+            videoPlayerView?.showClock(at: start)
+        }
     }
 
     /// Seeks a freshly attached stream back to where the user was. Called from

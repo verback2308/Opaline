@@ -24,7 +24,48 @@ extension VideoPlayerView {
 
     func hideBufferingIndicator() {
         bufferingIndicatorWork?.cancel()
+        // The resume seek owns the spinner until the picture is back.
+        guard !isResumeSeeking else {
+            return
+        }
         spinner.stopAnimating()
         setCenter(hidden: false)
+    }
+}
+
+// MARK: - Resume seek
+
+extension VideoPlayerView {
+    /// Covers the stretch between the item turning ready at its start and
+    /// the seek to the saved position landing — seconds on a slow stream.
+    /// The picture stays hidden behind the spinner and the clock already
+    /// reads the resume time, so the opening frame and 0:00 never show.
+    func beginResumeSeek(to seconds: Double) {
+        isResumeSeeking = true
+        playerLayer.isHidden = true
+        bufferingIndicatorWork?.cancel()
+        spinner.startAnimating()
+        setCenter(hidden: true)
+        showClock(at: seconds)
+    }
+
+    /// Puts the clock on where playback is about to start, before the item
+    /// reports any time of its own.
+    func showClock(at seconds: Double) {
+        currentTimeLabel.text = formatTime(seconds)
+        if duration > 0 {
+            seekBar.setProgress(seconds / duration)
+        }
+    }
+
+    func endResumeSeek() {
+        guard isResumeSeeking else {
+            return
+        }
+        isResumeSeeking = false
+        playerLayer.isHidden = false
+        if player?.timeControlStatus != .waitingToPlayAtSpecifiedRate {
+            hideBufferingIndicator()
+        }
     }
 }

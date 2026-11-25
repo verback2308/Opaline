@@ -120,17 +120,31 @@ extension WatchViewController {
         // The source may already have built the stream at this position
         // (SABR opens at the playhead) — seeking to where playback already
         // stands is a no-op, so this stays unconditional.
-        player.seek(
-            to: CMTime(
-                seconds: pos,
-                preferredTimescale: 1_000
-            ),
-            toleranceBefore: .zero,
-            toleranceAfter: .zero
-        )
+        seekCoveringStart(player, to: pos)
         AppLog.player(
             "resumed at \(Int(pos))s of \(Int(dur))s"
         )
+    }
+
+    /// Until the seek lands the item shows its opening frame and clock; keep
+    /// both covered so the video appears straight at the resume point.
+    private func seekCoveringStart(_ player: AVPlayer, to pos: Double) {
+        let cover = abs(CMTimeGetSeconds(player.currentTime()) - pos) > 1
+        if cover {
+            videoPlayerView?.beginResumeSeek(to: pos)
+        }
+        player.seek(
+            to: CMTime(seconds: pos, preferredTimescale: 1_000),
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        ) { [weak self] _ in
+            guard cover else {
+                return
+            }
+            DispatchQueue.main.async {
+                self?.videoPlayerView?.endResumeSeek()
+            }
+        }
     }
 
     func logPlaybackFailure(_ item: AVPlayerItem) {
