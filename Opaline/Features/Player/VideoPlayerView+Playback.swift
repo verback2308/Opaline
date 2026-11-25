@@ -43,7 +43,7 @@ extension VideoPlayerView {
         clockResync.isStalled = false
         clockResync.workItem?.cancel()
         clockResync.workItem = nil
-        (isResumeSeeking, playerLayer.isHidden) = (false, false)
+        resetClockAndCover()
         playerLayer.player = nil
         player = nil
         hideSkipButton()

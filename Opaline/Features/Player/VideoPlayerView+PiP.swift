@@ -118,6 +118,9 @@ extension VideoPlayerView {
     /// play state is remembered for the background resume.
     @objc
     func appWillResignActive() {
+        // A hidden layer can keep auto-PiP from starting; nothing is on
+        // screen to cover any more anyway.
+        endResumeSeek()
         guard !isPiPActive else {
             return
         }

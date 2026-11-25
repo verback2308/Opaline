@@ -65,6 +65,15 @@ extension VideoPlayerView {
         }
     }
 
+    /// The next item starts from a clean slate: no cover, and no clock or
+    /// bar left over from the video before it while the new one loads.
+    func resetClockAndCover() {
+        isResumeSeeking = false
+        playerLayer.isHidden = false
+        currentTimeLabel.text = formatTime(0)
+        seekBar.setProgress(0)
+    }
+
     func endResumeSeek() {
         guard isResumeSeeking else {
             return
