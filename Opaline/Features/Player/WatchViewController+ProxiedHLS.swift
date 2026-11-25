@@ -43,6 +43,12 @@ extension WatchViewController {
         if !prepared.captions.isEmpty {
             setCaptionTracks(prepared.captions)
         }
+        // Read before `attachPlayer` replaces the player it belongs to: a
+        // recovery or rebuild picks up where the old one stood. A player kept
+        // across a background hand-over still plays the previous video.
+        let ownPlayhead = savedPlayerForBackground == nil
+            ? rebuildPlayhead.map(CMTimeGetSeconds) : nil
+        let playhead = pendingRecoverySeek ? lastPlaybackPosition : ownPlayhead
         // After `attachPlayer` — it is what creates the player view on a
         // first load, so an earlier call would land on nothing.
         attachPlayer(item: prepared.item)
@@ -58,6 +64,7 @@ extension WatchViewController {
         // a slow stream; show where playback is going to start instead.
         let start = resumeAt.map(CMTimeGetSeconds)
             ?? prepared.startsAt
+            ?? playhead
             ?? rebuildPlayhead.map(CMTimeGetSeconds)
         if let start, start > 1 {
             videoPlayerView?.showClock(at: start)

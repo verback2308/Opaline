@@ -255,7 +255,7 @@ final class VideoPlayerView: UIView {
     var wasPlayingOnResign = false, pipStartPending = false
     let multitaskPause = MultitaskPauseState()
     var pipIsStarting = false, playerNeedsRebuildForPiP = false, pipIsRestoring = false
-    var duration: Double = 0, isResumeSeeking = false
+    var duration: Double = 0, isResumeSeeking = false, heldClock: Double?
     var rateObservation: NSKeyValueObservation?
     var statusObservation: NSKeyValueObservation?
     var timeControlObservation: NSKeyValueObservation?

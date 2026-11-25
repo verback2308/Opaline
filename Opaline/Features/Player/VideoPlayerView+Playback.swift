@@ -235,7 +235,7 @@ extension VideoPlayerView {
             DispatchQueue.main.async {
                 let secs = CMTimeGetSeconds(item.duration)
                 if secs.isFinite, secs > 0 {
-                    self?.duration = secs
+                    self?.applyDuration(secs)
                     self?.durationLabel.text = formatTime(
                         secs
                     )

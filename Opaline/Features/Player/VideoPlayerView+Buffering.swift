@@ -59,17 +59,32 @@ extension VideoPlayerView {
     /// Puts the clock on where playback is about to start, before the item
     /// reports any time of its own.
     func showClock(at seconds: Double) {
+        heldClock = seconds
         currentTimeLabel.text = formatTime(seconds)
         if duration > 0 {
             seekBar.setProgress(seconds / duration)
         }
     }
 
-    /// The next item starts from a clean slate: no cover, and no clock or
-    /// bar left over from the video before it while the new one loads.
+    /// The item's length arrived. A clock set ahead of the item's own time
+    /// gets its bar now that there is something to measure it against.
+    func applyDuration(_ seconds: Double) {
+        duration = seconds
+        if let held = heldClock, !showsItemTime {
+            seekBar.setProgress(held / seconds)
+        }
+    }
+
+    /// The next item starts from a clean slate: no cover, and no clock, bar
+    /// or length left over from the video before it while the new one loads.
     func resetClockAndCover() {
+        if isResumeSeeking {
+            spinner.stopAnimating()
+            setCenter(hidden: false)
+        }
         isResumeSeeking = false
         playerLayer.isHidden = false
+        (duration, heldClock) = (0, nil)
         currentTimeLabel.text = formatTime(0)
         seekBar.setProgress(0)
     }
