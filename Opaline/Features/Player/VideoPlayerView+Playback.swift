@@ -254,10 +254,11 @@ extension VideoPlayerView {
     // MARK: - Progress
 
     func updateProgress(time: CMTime) {
+        let secs = CMTimeGetSeconds(time)
+        defer { onTimeUpdate?(secs) }  // live items have no duration, but still tick
         guard duration > 0 else {
             return
         }
-        let secs = CMTimeGetSeconds(time)
         // The overlay is hidden most of the time, and while it is there is
         // nothing to redraw — but the observer still ticks 10x/sec to drive
         // SponsorBlock, subtitles and watchtime through `onTimeUpdate`, so
@@ -278,7 +279,6 @@ extension VideoPlayerView {
             seekBar.setProgress(secs / duration)
             updateBuffer(at: time)
         }
-        onTimeUpdate?(secs)
     }
 
     private func updateBuffer(at time: CMTime) {

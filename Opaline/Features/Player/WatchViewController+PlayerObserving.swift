@@ -129,7 +129,12 @@ extension WatchViewController {
     /// Until the seek lands the item shows its opening frame and clock; keep
     /// both covered so the video appears straight at the resume point.
     private func seekCoveringStart(_ player: AVPlayer, to pos: Double) {
-        let cover = abs(CMTimeGetSeconds(player.currentTime()) - pos) > 1
+        // Not while the app is inactive or in PiP: a hidden layer can keep
+        // PiP from starting, and nothing on screen needs covering then.
+        let onScreen = UIApplication.shared.applicationState == .active
+            && videoPlayerView?.isPiPActive == false
+        let cover = onScreen && abs(CMTimeGetSeconds(player.currentTime()) - pos) > 1
+        let item = player.currentItem
         if cover {
             videoPlayerView?.beginResumeSeek(to: pos)
         }
@@ -142,7 +147,12 @@ extension WatchViewController {
                 return
             }
             DispatchQueue.main.async {
-                self?.videoPlayerView?.endResumeSeek()
+                // A late completion from a replaced item must not lift the
+                // cover of the one after it.
+                guard let view = self?.videoPlayerView, view.player?.currentItem === item else {
+                    return
+                }
+                view.endResumeSeek()
             }
         }
     }

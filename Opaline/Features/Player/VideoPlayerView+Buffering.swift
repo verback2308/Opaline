@@ -86,7 +86,9 @@ extension VideoPlayerView {
         playerLayer.isHidden = false
         (duration, heldClock) = (0, nil)
         currentTimeLabel.text = formatTime(0)
+        durationLabel.text = formatTime(0)
         seekBar.setProgress(0)
+        seekBar.setBuffer(0)
     }
 
     func endResumeSeek() {
