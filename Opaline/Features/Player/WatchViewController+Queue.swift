@@ -36,7 +36,7 @@ extension WatchViewController {
         guard video.id == initialVideo.id,
               video.playlistId == nil || video.playlistId == initialVideo.playlistId,
               savedPlayerForBackground == nil, autoplayOverlay == nil,
-              !isRecoveringPlayback, !hasSeenPlaybackError,
+              !isRecoveringPlayback, !pendingRecoverySeek, !hasSeenPlaybackError,
               watchPage != nil, playerStatusLabel.isHidden,
               let playerView = videoPlayerView, !playerView.isAtEnd else {
             return false
