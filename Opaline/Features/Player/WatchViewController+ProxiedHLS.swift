@@ -10,10 +10,15 @@ extension WatchViewController {
     /// position has been seeked to (the auto-dub probe routinely does: the
     /// primary delivers in 400 ms, the item is not even ready yet), and
     /// `currentTime` is 0 then. Handing that over restarts the video from
-    /// the beginning, which is exactly what the resume was avoiding.
+    /// the beginning, which is exactly what the resume was avoiding. The
+    /// same holds while the resume seek is still landing: the player stands
+    /// at its placeholder start, and the clock holds where it is going.
     var rebuildPlayhead: CMTime? {
-        guard let player = videoPlayerView?.player else {
+        guard let view = videoPlayerView, let player = view.player else {
             return nil
+        }
+        if view.isResumeSeeking, let held = view.heldClock {
+            return CMTime(seconds: held, preferredTimescale: 1_000)
         }
         guard !didSeekToSavedPosition,
               let saved = WatchProgressStore.shared.resumeSeconds(
