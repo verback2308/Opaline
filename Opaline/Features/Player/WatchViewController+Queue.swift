@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 
 // MARK: - Playing queue
@@ -22,6 +23,28 @@ extension WatchViewController {
     /// is already too late.
     func applyResumePolicy(for video: Video) {
         WatchProgressStore.shared.suppressResume = video.playlistId != nil
+    }
+
+    /// Whether opening `video` again would only restart what this screen
+    /// already plays — tapping it in a feed while it runs in the mini player.
+    /// A failed item, or a different playlist to play it in, still reloads.
+    func isAlreadyPlaying(_ video: Video) -> Bool {
+        guard video.id == initialVideo.id,
+              video.playlistId == nil || video.playlistId == initialVideo.playlistId,
+              let item = videoPlayerView?.player?.currentItem else {
+            return false
+        }
+        return item.status != .failed
+    }
+
+    /// A timed link to the video already playing moves the playhead instead
+    /// of loading the video again.
+    func seek(toLinkTime seconds: Double) {
+        videoPlayerView?.player?.seek(
+            to: CMTime(seconds: seconds, preferredTimescale: 1_000),
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        )
     }
 
     /// The queue changed under us — "Play next" adds to it from a menu that
