@@ -30,7 +30,8 @@ extension WatchViewController {
         guard pendingRecoverySeek else {
             return false
         }
-        isRecoveringPlayback = false
+        // Errors that came in while the rebuild ran belonged to the old item.
+        (isRecoveringPlayback, hasSeenPlaybackError) = (false, false)
         let target = lastPlaybackPosition
         // A rebuilt stream that already opens at the playhead is where it
         // needs to be. Seeking there anyway leaves the player working the head

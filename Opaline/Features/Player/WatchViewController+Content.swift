@@ -431,6 +431,7 @@ extension WatchViewController {
         // Loop is a property of the video you turned it on for.
         videoPlayerView?.isLooping = false
         watchPage = nil
+        hasSeenPlaybackError = false
         isLoadingRelated = true
         allRelatedVideos = []
         visibleRelatedVideos = []

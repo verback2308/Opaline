@@ -53,7 +53,10 @@ final class VideoRouter {
             return
         }
         if let panel {
-            panel.watchVC.loadVideo(video)
+            // Already playing there: bring it up rather than start it over.
+            if !panel.watchVC.isAlreadyPlaying(video) {
+                panel.watchVC.loadVideo(video)
+            }
             panel.expand(animated: true)
             return
         }
@@ -86,6 +89,16 @@ final class VideoRouter {
         isShort: Bool = false,
         playlistId: String? = nil
     ) {
+        // A short opening in the vertical feed never reaches the player.
+        let toFeed = isShort && ShortsPlayerMode.selected == .vertical
+        if let panel, !toFeed,
+           panel.watchVC.isAlreadyPlaying(Video(id: videoId, playlistId: playlistId)) {
+            if let seconds {
+                panel.watchVC.seek(toLinkTime: seconds)
+            }
+            panel.expand(animated: true)
+            return
+        }
         if let seconds {
             WatchProgressStore.shared.setLinkStart(
                 seconds: seconds, forVideoId: videoId

@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 
 // MARK: - Playing queue
@@ -22,6 +23,41 @@ extension WatchViewController {
     /// is already too late.
     func applyResumePolicy(for video: Video) {
         WatchProgressStore.shared.suppressResume = video.playlistId != nil
+    }
+
+    /// Whether opening `video` again would only restart what this screen
+    /// already plays — tapping it in a feed while it runs in the mini player.
+    /// Anything short of healthy playback of this very video still reloads,
+    /// as that is how the user retries: an item not yet ready or failed, a
+    /// recovery, an error or status message, a watch page that never loaded,
+    /// the end screen or an autoplay countdown, a background hand-over still
+    /// showing the previous video, or a different playlist to play it in.
+    func isAlreadyPlaying(_ video: Video) -> Bool {
+        guard video.id == initialVideo.id,
+              video.playlistId == nil || video.playlistId == initialVideo.playlistId,
+              savedPlayerForBackground == nil, autoplayOverlay == nil,
+              !isRecoveringPlayback, !pendingRecoverySeek, !hasSeenPlaybackError,
+              watchPage != nil, playerStatusLabel.isHidden,
+              let playerView = videoPlayerView, !playerView.isAtEnd else {
+            return false
+        }
+        return playerView.player?.currentItem?.status == .readyToPlay
+    }
+
+    /// A timed link to the video already playing moves the playhead instead
+    /// of loading the video again, and plays from there as a load would.
+    func seek(toLinkTime seconds: Double) {
+        guard let playerView = videoPlayerView, let player = playerView.player else {
+            return
+        }
+        player.seek(
+            to: CMTime(seconds: seconds, preferredTimescale: 1_000),
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        )
+        if player.rate == 0 {
+            player.playImmediately(atRate: playerView.playbackSpeed)
+        }
     }
 
     /// The queue changed under us — "Play next" adds to it from a menu that
