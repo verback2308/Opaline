@@ -81,7 +81,11 @@ extension WatchViewController {
             return
         }
         let wasPlaying = old.rate > 0
-        let position = old.currentTime()
+        // Mid resume seek the old player still stands at its placeholder
+        // start; carry over where it was going instead.
+        let held = playerView.isResumeSeeking ? playerView.heldClock : nil
+        let position = held.map { CMTime(seconds: $0, preferredTimescale: 1_000) }
+            ?? old.currentTime()
         old.pause()
         stopObservingPlayerItem(item)
         old.replaceCurrentItem(with: nil)
