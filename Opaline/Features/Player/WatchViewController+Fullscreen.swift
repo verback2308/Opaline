@@ -66,11 +66,22 @@ extension WatchViewController {
         // arrives half a second late and shoves the settled layout down.
         isLeavingFullscreen = true
         setNeedsStatusBarAppearanceUpdate()
-        let target = snap.superview.convert(snap.frame, to: window)
         guard animated else {
             restoreFromFullscreen(playerView: playerView, snapshot: snap)
             return
         }
+        // The page under the player was left as it was when fullscreen began:
+        // a rotation since then never reached it, and the nav bar still sits
+        // where it did without the status bar. Catch it up now, while the
+        // player covers it, so the player shrinks into the slot it ends up
+        // in. Done after the animation instead, the page snaps to the new
+        // orientation and the nav bar pops in on top of the settled player.
+        UIView.performWithoutAnimation {
+            layOutPage(for: view.bounds.size)
+            window.setNeedsLayout()
+            window.layoutIfNeeded()
+        }
+        let target = snap.superview.convert(snap.superview.bounds, to: window)
         UIView.animate(
             withDuration: 0.25,
             delay: 0,
