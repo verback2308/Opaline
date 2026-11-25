@@ -267,7 +267,7 @@ extension VideoPlayerView {
         // and the bar's fill/thumb — the periodic observer must not fight
         // the finger with the actual playback position (issue: label was
         // unreadable mid-scrub).
-        if controlsVisible, !seekBar.isScrubbing {
+        if controlsVisible, !seekBar.isScrubbing, showsItemTime {
             // This string changes once a second; assigning it every tick
             // invalidates the label's intrinsic size and relays out the
             // whole bottom bar.

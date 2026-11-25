@@ -36,6 +36,13 @@ extension VideoPlayerView {
 // MARK: - Resume seek
 
 extension VideoPlayerView {
+    /// Before the item is ready, and while the resume seek runs, its time is
+    /// a placeholder 0 rather than where playback is: the clock keeps what
+    /// `showClock` put there.
+    var showsItemTime: Bool {
+        !isResumeSeeking && player?.currentItem?.status == .readyToPlay
+    }
+
     /// Covers the stretch between the item turning ready at its start and
     /// the seek to the saved position landing — seconds on a slow stream.
     /// The picture stays hidden behind the spinner and the clock already
