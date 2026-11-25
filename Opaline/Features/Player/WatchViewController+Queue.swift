@@ -27,24 +27,35 @@ extension WatchViewController {
 
     /// Whether opening `video` again would only restart what this screen
     /// already plays — tapping it in a feed while it runs in the mini player.
-    /// A failed item, or a different playlist to play it in, still reloads.
+    /// Anything short of healthy playback of this very video still reloads:
+    /// an item not yet ready or failed, a recovery or error, the end screen
+    /// or an autoplay countdown, a background hand-over still showing the
+    /// previous video, or a different playlist to play it in.
     func isAlreadyPlaying(_ video: Video) -> Bool {
         guard video.id == initialVideo.id,
               video.playlistId == nil || video.playlistId == initialVideo.playlistId,
-              let item = videoPlayerView?.player?.currentItem else {
+              savedPlayerForBackground == nil, autoplayOverlay == nil,
+              !isRecoveringPlayback, !hasSeenPlaybackError,
+              let playerView = videoPlayerView, !playerView.isAtEnd else {
             return false
         }
-        return item.status != .failed
+        return playerView.player?.currentItem?.status == .readyToPlay
     }
 
     /// A timed link to the video already playing moves the playhead instead
-    /// of loading the video again.
+    /// of loading the video again, and plays from there as a load would.
     func seek(toLinkTime seconds: Double) {
-        videoPlayerView?.player?.seek(
+        guard let playerView = videoPlayerView, let player = playerView.player else {
+            return
+        }
+        player.seek(
             to: CMTime(seconds: seconds, preferredTimescale: 1_000),
             toleranceBefore: .zero,
             toleranceAfter: .zero
         )
+        if player.rate == 0 {
+            player.playImmediately(atRate: playerView.playbackSpeed)
+        }
     }
 
     /// The queue changed under us — "Play next" adds to it from a menu that
