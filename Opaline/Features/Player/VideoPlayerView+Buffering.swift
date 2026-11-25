@@ -40,7 +40,11 @@ extension VideoPlayerView {
     /// a placeholder 0 rather than where playback is: the clock keeps what
     /// `showClock` put there.
     var showsItemTime: Bool {
-        !isResumeSeeking && player?.currentItem?.status == .readyToPlay
+        !isResumeSeeking && isItemReady
+    }
+
+    var isItemReady: Bool {
+        player?.currentItem?.status == .readyToPlay
     }
 
     /// Covers the stretch between the item turning ready at its start and
@@ -84,6 +88,11 @@ extension VideoPlayerView {
         }
         isResumeSeeking = false
         playerLayer.isHidden = false
+        resetClock()
+    }
+
+    /// No clock, bar or length left over from the item before.
+    func resetClock() {
         (duration, heldClock) = (0, nil)
         currentTimeLabel.text = formatTime(0)
         durationLabel.text = formatTime(0)

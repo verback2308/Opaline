@@ -34,7 +34,7 @@ extension VideoPlayerView {
         player = newPlayer
         removePlayerObservers()
         addPlayerObservers()
-        duration = 0
+        resetClock()
     }
 
     func detach() {
@@ -255,7 +255,7 @@ extension VideoPlayerView {
 
     func updateProgress(time: CMTime) {
         let secs = CMTimeGetSeconds(time)
-        defer { onTimeUpdate?(secs) }  // live items have no duration, but still tick
+        defer { if duration > 0 || isItemReady { onTimeUpdate?(secs) } }  // live: no duration
         guard duration > 0 else {
             return
         }

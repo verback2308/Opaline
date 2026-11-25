@@ -58,6 +58,8 @@ extension VideoPlayerView {
     /// observer at it. Used to escape the iOS 12 state where a player that
     /// was detached from its layer can never enter PiP again (#28).
     func replacePlayer(_ newPlayer: AVPlayer) {
+        // The fresh player has no seek of its own to lift a cover with.
+        endResumeSeek()
         removePeriodicObserver()
         removePlayerObservers()
         player = newPlayer
