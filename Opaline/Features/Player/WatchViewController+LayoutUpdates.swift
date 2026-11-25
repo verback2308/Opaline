@@ -19,7 +19,12 @@ extension WatchViewController {
         guard fullscreenSnapshot == nil else {
             return
         }
-        let resolved = size ?? view.bounds.size
+        layOutPage(for: size ?? view.bounds.size)
+    }
+
+    /// The page under the player, laid out for `resolved`. Leaving
+    /// fullscreen calls it directly, while the player still covers the page.
+    func layOutPage(for resolved: CGSize) {
         let isLandscape = resolved.width > resolved.height
 
         // Deliberately unconditional. Gating this on "the size changed"
