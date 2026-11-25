@@ -10,10 +10,15 @@ extension WatchViewController {
     /// position has been seeked to (the auto-dub probe routinely does: the
     /// primary delivers in 400 ms, the item is not even ready yet), and
     /// `currentTime` is 0 then. Handing that over restarts the video from
-    /// the beginning, which is exactly what the resume was avoiding.
+    /// the beginning, which is exactly what the resume was avoiding. The
+    /// same holds while the resume seek is still landing: the player stands
+    /// at its placeholder start, and the clock holds where it is going.
     var rebuildPlayhead: CMTime? {
-        guard let player = videoPlayerView?.player else {
+        guard let view = videoPlayerView, let player = view.player else {
             return nil
+        }
+        if view.isResumeSeeking, let held = view.heldClock {
+            return CMTime(seconds: held, preferredTimescale: 1_000)
         }
         guard !didSeekToSavedPosition,
               let saved = WatchProgressStore.shared.resumeSeconds(
@@ -43,6 +48,12 @@ extension WatchViewController {
         if !prepared.captions.isEmpty {
             setCaptionTracks(prepared.captions)
         }
+        // Read before `attachPlayer` replaces the player it belongs to: a
+        // recovery or rebuild picks up where the old one stood. A player kept
+        // across a background hand-over still plays the previous video.
+        let ownPlayhead = savedPlayerForBackground == nil
+            ? rebuildPlayhead.map(CMTimeGetSeconds) : nil
+        let playhead = pendingRecoverySeek ? lastPlaybackPosition : ownPlayhead
         // After `attachPlayer` — it is what creates the player view on a
         // first load, so an earlier call would land on nothing.
         attachPlayer(item: prepared.item)
@@ -53,6 +64,15 @@ extension WatchViewController {
         )
         if let resumeAt, CMTimeGetSeconds(resumeAt) > 1 {
             pendingResumeSeek = resumeAt
+        }
+        // The clock reads 0:00 until the item reports a time, seconds away on
+        // a slow stream; show where playback is going to start instead.
+        let start = resumeAt.map(CMTimeGetSeconds)
+            ?? prepared.startsAt
+            ?? playhead
+            ?? rebuildPlayhead.map(CMTimeGetSeconds)
+        if let start, start > 1 {
+            videoPlayerView?.showClock(at: start)
         }
     }
 

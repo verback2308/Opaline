@@ -35,8 +35,10 @@ extension VideoPlayerView {
             self?.pauseAutoHide()
         }
         seekBar.onScrubEnd = { [weak self] progress in
+            // No length yet (the next item is still loading): nothing to
+            // measure the bar against, so a release would seek to 0.
             guard let self,
-                  let currentPlayer = self.player
+                  let currentPlayer = self.player, self.duration > 0
             else {
                 return
             }

@@ -34,7 +34,7 @@ extension VideoPlayerView {
         player = newPlayer
         removePlayerObservers()
         addPlayerObservers()
-        duration = 0
+        resetClock()
     }
 
     func detach() {
@@ -43,7 +43,7 @@ extension VideoPlayerView {
         clockResync.isStalled = false
         clockResync.workItem?.cancel()
         clockResync.workItem = nil
-        playerLayer.isHidden = false
+        resetClockAndCover()
         playerLayer.player = nil
         player = nil
         hideSkipButton()
@@ -235,7 +235,7 @@ extension VideoPlayerView {
             DispatchQueue.main.async {
                 let secs = CMTimeGetSeconds(item.duration)
                 if secs.isFinite, secs > 0 {
-                    self?.duration = secs
+                    self?.applyDuration(secs)
                     self?.durationLabel.text = formatTime(
                         secs
                     )
@@ -254,10 +254,11 @@ extension VideoPlayerView {
     // MARK: - Progress
 
     func updateProgress(time: CMTime) {
+        let secs = CMTimeGetSeconds(time)
+        defer { if duration > 0 || isItemReady { onTimeUpdate?(secs) } }  // live: no duration
         guard duration > 0 else {
             return
         }
-        let secs = CMTimeGetSeconds(time)
         // The overlay is hidden most of the time, and while it is there is
         // nothing to redraw — but the observer still ticks 10x/sec to drive
         // SponsorBlock, subtitles and watchtime through `onTimeUpdate`, so
@@ -267,7 +268,7 @@ extension VideoPlayerView {
         // and the bar's fill/thumb — the periodic observer must not fight
         // the finger with the actual playback position (issue: label was
         // unreadable mid-scrub).
-        if controlsVisible, !seekBar.isScrubbing {
+        if controlsVisible, !seekBar.isScrubbing, showsItemTime {
             // This string changes once a second; assigning it every tick
             // invalidates the label's intrinsic size and relays out the
             // whole bottom bar.
@@ -278,7 +279,6 @@ extension VideoPlayerView {
             seekBar.setProgress(secs / duration)
             updateBuffer(at: time)
         }
-        onTimeUpdate?(secs)
     }
 
     private func updateBuffer(at time: CMTime) {

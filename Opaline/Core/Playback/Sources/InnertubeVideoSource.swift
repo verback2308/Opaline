@@ -163,13 +163,11 @@ final class InnertubeVideoSource: VideoSource {
         // Build straight at the saved playhead: a sequential stream (SABR)
         // would otherwise deliver the opening minutes and be seeked away from
         // them the moment the item turns ready.
-        buildBest(
-            info: info,
-            resumeAt: WatchProgressStore.shared.resumeSeconds(
-                forVideoId: videoId, duration: info.duration
-            ),
-            completion: completion
+        let resumeAt = WatchProgressStore.shared.resumeSeconds(
+            forVideoId: videoId, duration: info.duration
         )
+        logStartPoint(resumeAt, videoId: videoId, duration: info.duration)
+        buildBest(info: info, resumeAt: resumeAt, completion: completion)
     }
 
     /// Publishes what a `/player` response says about tracks and qualities,
@@ -280,5 +278,20 @@ private extension InnertubeVideoSource {
         }
         currentQuality = quality
         completion(.success(prepared))
+    }
+}
+
+extension InnertubeVideoSource {
+    /// Where the stream is built from, and what decided it: a stream built
+    /// from the start has to be seeked to the saved position once ready.
+    func logStartPoint(_ resumeAt: Double?, videoId: String, duration: Double?) {
+        let store = WatchProgressStore.shared
+        let saved = store.progress(forVideoId: videoId)?.fraction
+        AppLog.player(
+            "\(name): building from \(resumeAt.map { "\(Int($0))s" } ?? "the start")"
+                + " (saved \(saved.map { "\($0)" } ?? "none"),"
+                + " duration \(duration.map { "\(Int($0))s" } ?? "none"),"
+                + " suppressed \(store.suppressResume))"
+        )
     }
 }
