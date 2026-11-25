@@ -27,15 +27,17 @@ extension WatchViewController {
 
     /// Whether opening `video` again would only restart what this screen
     /// already plays — tapping it in a feed while it runs in the mini player.
-    /// Anything short of healthy playback of this very video still reloads:
-    /// an item not yet ready or failed, a recovery or error, the end screen
-    /// or an autoplay countdown, a background hand-over still showing the
-    /// previous video, or a different playlist to play it in.
+    /// Anything short of healthy playback of this very video still reloads,
+    /// as that is how the user retries: an item not yet ready or failed, a
+    /// recovery, an error or status message, a watch page that never loaded,
+    /// the end screen or an autoplay countdown, a background hand-over still
+    /// showing the previous video, or a different playlist to play it in.
     func isAlreadyPlaying(_ video: Video) -> Bool {
         guard video.id == initialVideo.id,
               video.playlistId == nil || video.playlistId == initialVideo.playlistId,
               savedPlayerForBackground == nil, autoplayOverlay == nil,
               !isRecoveringPlayback, !hasSeenPlaybackError,
+              watchPage != nil, playerStatusLabel.isHidden,
               let playerView = videoPlayerView, !playerView.isAtEnd else {
             return false
         }

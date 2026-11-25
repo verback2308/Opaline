@@ -89,7 +89,9 @@ final class VideoRouter {
         isShort: Bool = false,
         playlistId: String? = nil
     ) {
-        if let panel, !isShort,
+        // A short opening in the vertical feed never reaches the player.
+        let toFeed = isShort && ShortsPlayerMode.selected == .vertical
+        if let panel, !toFeed,
            panel.watchVC.isAlreadyPlaying(Video(id: videoId, playlistId: playlistId)) {
             if let seconds {
                 panel.watchVC.seek(toLinkTime: seconds)
